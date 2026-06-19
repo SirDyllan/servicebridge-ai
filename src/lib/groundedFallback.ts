@@ -56,13 +56,7 @@ function buildReply(retrieval: ChatRetrievalResult, urgentPrefix: string) {
   }
 
   if (retrieval.needsMoreInformation) {
-    const questionLine = nextQuestion ? ` My next question is: ${nextQuestion}` : "";
-    return (
-      urgentPrefix +
-      "I can help. From what you shared, your request may connect to " +
-      retrieval.classification.primaryNeeds.join(", ") +
-      `. I will ask one question at a time so the guidance stays accurate.${questionLine}`
-    );
+    return urgentPrefix + buildFollowUpReply(nextQuestion, retrieval.classification.primaryNeeds);
   }
 
   return (
@@ -73,9 +67,27 @@ function buildReply(retrieval: ChatRetrievalResult, urgentPrefix: string) {
   );
 }
 
+function buildFollowUpReply(nextQuestion: string, primaryNeeds: string[]) {
+  if (!nextQuestion) return "Thanks, that helps. I need one more detail before giving guidance.";
+
+  if (nextQuestion.toLowerCase().includes("proof of enrollment")) {
+    return `Missing ID can make applications harder, but you can still prepare the student-support route. ${nextQuestion}`;
+  }
+
+  if (nextQuestion.toLowerCase().includes("city")) {
+    return `Thanks, that helps. ${nextQuestion}`;
+  }
+
+  if (nextQuestion.toLowerCase().includes("urgent")) {
+    return `I have the main support need and location now. ${nextQuestion}`;
+  }
+
+  return `Your situation may connect to ${primaryNeeds.join(", ")}. ${nextQuestion}`;
+}
+
 function buildDocumentChecklist(message: string, retrieval: ChatRetrievalResult) {
   const normalized = message.toLowerCase();
-  const needed = Array.from(new Set(retrieval.records.flatMap((record) => record.documentsNeeded))).slice(0, 9);
+  const needed = canonicalDocumentItems(retrieval.records.flatMap((record) => record.documentsNeeded), normalized);
   const missing: string[] = [];
   const notes: string[] = [
     "Requirements differ by location and program. Confirm the exact list with the official office before travelling or paying any fees.",
@@ -90,7 +102,7 @@ function buildDocumentChecklist(message: string, retrieval: ChatRetrievalResult)
   }
 
   if (normalized.includes("student")) {
-    needed.push("Student letter or proof of enrollment");
+    addUnique(needed, "Proof of enrollment or student letter");
   }
 
   if (
@@ -100,20 +112,65 @@ function buildDocumentChecklist(message: string, retrieval: ChatRetrievalResult)
     normalized.includes("unemployed") ||
     normalized.includes("part-time")
   ) {
-    needed.push("Proof of income change or unemployment");
+    addUnique(needed, "Short explanation or proof of income change");
   }
 
   if (!normalized.includes("proof of residence")) {
     missing.push("Proof of residence status unknown");
   }
 
-  needed.push("Contact details");
-
   return {
-    needed: Array.from(new Set(needed)),
+    needed,
     missing: Array.from(new Set(missing)),
     notes,
   };
+}
+
+function canonicalDocumentItems(items: string[], message: string) {
+  const needed: string[] = [];
+
+  items.forEach((item) => {
+    const normalized = item.toLowerCase();
+
+    if (normalized.includes("police") && !message.includes("stolen")) return;
+    if (normalized.includes("parent") || normalized.includes("guardian")) return;
+    if (["current location", "contact details", "household size if relevant"].includes(normalized)) return;
+
+    if (normalized.includes("student") || normalized.includes("enrollment")) {
+      addUnique(needed, "Proof of enrollment or student letter");
+      return;
+    }
+
+    if (normalized.includes("income") || normalized.includes("unemployment") || normalized.includes("job")) {
+      addUnique(needed, "Short explanation or proof of income change");
+      return;
+    }
+
+    if (normalized.includes("residence") || normalized.includes("address")) {
+      addUnique(needed, "Proof of residence if available");
+      return;
+    }
+
+    if (normalized.includes("birth certificate")) {
+      addUnique(needed, "Birth certificate or accepted identity alternative");
+      return;
+    }
+
+    if (normalized.includes("id") || normalized.includes("identity")) {
+      addUnique(needed, "Any identity proof you still have, such as an old ID copy or school record");
+      return;
+    }
+
+    if (normalized.includes("urgent") || normalized.includes("summary") || normalized.includes("problem")) {
+      addUnique(needed, "Short written summary of your food and school-expense need");
+    }
+  });
+
+  return needed.slice(0, 7);
+}
+
+function addUnique(items: string[], value: string) {
+  if (!items.includes(value)) items.push(value);
 }
 
 function mentionsMissingId(message: string) {

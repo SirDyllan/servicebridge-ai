@@ -173,7 +173,7 @@ export default function Home() {
           </div>
         </div>
 
-        <div className="absolute inset-x-0 bottom-0 translate-y-1/2 px-5 sm:px-8">
+        <div className="mt-12 px-0 lg:absolute lg:inset-x-0 lg:bottom-0 lg:mt-0 lg:translate-y-1/2 lg:px-8">
           <div className="mx-auto grid max-w-6xl gap-4 lg:grid-cols-3">
             {floatingCards.map((card) => {
               const Icon = card.icon;
@@ -194,14 +194,14 @@ export default function Home() {
         </div>
       </section>
 
-      <section id="how-it-works" className="bg-white px-5 pb-16 pt-40 sm:px-8 lg:pt-36">
+      <section id="how-it-works" className="bg-[#808080] px-5 pb-16 pt-16 text-white sm:px-8 lg:pt-36">
         <div className="mx-auto max-w-7xl">
           <div className="sb-fade-up mx-auto max-w-4xl text-center">
-            <p className="text-sm font-black uppercase tracking-[0.2em] text-[#12A6A6]">How it works</p>
-            <h2 className="mt-3 text-4xl font-black uppercase leading-tight tracking-tight text-[#244B35] sm:text-6xl">
+            <p className="text-sm font-black uppercase tracking-[0.2em] text-white/80">How it works</p>
+            <h2 className="mx-auto mt-3 max-w-4xl text-3xl font-black uppercase leading-[1.08] tracking-tight text-white sm:text-5xl lg:text-6xl">
               We help users move from stress to clarity
             </h2>
-            <p className="mx-auto mt-5 max-w-3xl text-base font-semibold leading-8 text-[#244B35]/72">
+            <p className="mx-auto mt-5 max-w-3xl text-base font-semibold leading-8 text-white/82">
               Public support systems can be confusing, especially when users do not know the right program name,
               required documents, or office to contact. ServiceBridge AI asks simple questions, checks support pathways,
               and explains the next steps in plain language.

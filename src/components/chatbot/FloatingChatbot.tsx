@@ -113,9 +113,7 @@ export function FloatingChatbot() {
       return;
     }
 
-    await sendMessage(
-      `${action} for my situation. ${messages.filter((item) => item.role === "user").at(-1)?.content ?? ""}`,
-    );
+    await sendMessage(action);
   }
 
   return (
@@ -364,11 +362,16 @@ function StructuredResponse({
           <FileText className="size-3" />
           Documents
         </div>
-        <p className="text-xs font-semibold leading-5 text-emerald-950">
-          {response.documentChecklist.missing.length
-            ? `Missing or unknown: ${response.documentChecklist.missing.join(", ")}`
-            : "Check required documents with the official office."}
-        </p>
+        {response.documentChecklist.needed.length ? (
+          <p className="text-xs font-semibold leading-5 text-emerald-950">
+            Needed: {response.documentChecklist.needed.join(", ")}
+          </p>
+        ) : null}
+        {response.documentChecklist.missing.length ? (
+          <p className="mt-1 text-xs font-semibold leading-5 text-emerald-950">
+            Missing or unknown: {response.documentChecklist.missing.join(", ")}
+          </p>
+        ) : null}
       </div>
 
       <DocumentQuickChecks
@@ -494,6 +497,9 @@ function getDocumentQuickCheckItems(response: ChatResponse) {
   const knownMissingKeys = new Set(response.documentChecklist.missing.map((documentName) => {
     return normalizeDocumentKey(cleanDocumentName(documentName));
   }));
+  const knownMissingIdentity = response.documentChecklist.missing.some((documentName) => {
+    return /\b(id|identity|national id)\b/i.test(documentName);
+  });
   const likelyDocuments = [
     ...response.classification.documentIssues,
     ...response.documentChecklist.needed,
@@ -505,11 +511,20 @@ function getDocumentQuickCheckItems(response: ChatResponse) {
   likelyDocuments.forEach((documentName) => {
     const cleaned = cleanDocumentName(documentName);
     const key = normalizeDocumentKey(cleaned);
-    if (!key || normalized.has(key) || knownMissingKeys.has(key)) return;
+    const isIdentityCheck = /\b(id|identity)\b/i.test(cleaned);
+    if (!key || normalized.has(key) || knownMissingKeys.has(key) || !isValidDocumentCheck(cleaned)) return;
+    if (knownMissingIdentity && isIdentityCheck) return;
     normalized.set(key, cleaned);
   });
 
   return [...normalized.values()].slice(0, 5);
+}
+
+function isValidDocumentCheck(value: string) {
+  const normalized = value.toLowerCase();
+  return !["current location", "household size if relevant", "contact details", "short explanation of urgent need"].includes(
+    normalized,
+  );
 }
 
 function cleanDocumentName(value: string) {

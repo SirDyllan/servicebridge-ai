@@ -113,7 +113,8 @@ export function normalizeChatResponse(
   const intakeStatus = fallbackHasNextQuestion ? (raw.intakeStatus ?? fallback.intakeStatus) : fallback.intakeStatus;
   const nextQuestion = fallbackHasNextQuestion ? cleanText(fallback.nextQuestion) : "";
   const replySource =
-    !fallbackHasNextQuestion && (raw.intakeStatus === "needs_follow_up" || looksLikeFollowUpQuestion(raw.reply))
+    fallbackHasNextQuestion ||
+    (!fallbackHasNextQuestion && (raw.intakeStatus === "needs_follow_up" || looksLikeFollowUpQuestion(raw.reply)))
       ? fallback.reply
       : raw.reply;
   const reply = ensureNextQuestionInReply(
@@ -146,9 +147,9 @@ export function normalizeChatResponse(
       verificationStatus: match.verificationStatus ?? fallback.matches[index]?.verificationStatus ?? "sample",
     })) : fallback.matches,
     documentChecklist: {
-      needed: asStringArray(raw.documentChecklist?.needed, fallback.documentChecklist.needed),
-      missing: asStringArray(raw.documentChecklist?.missing, fallback.documentChecklist.missing),
-      notes: asStringArray(raw.documentChecklist?.notes, fallback.documentChecklist.notes),
+      needed: asNonEmptyStringArray(raw.documentChecklist?.needed, fallback.documentChecklist.needed),
+      missing: asNonEmptyStringArray(raw.documentChecklist?.missing, fallback.documentChecklist.missing),
+      notes: asNonEmptyStringArray(raw.documentChecklist?.notes, fallback.documentChecklist.notes),
     },
     humanReferral: {
       needed: raw.humanReferral?.needed ?? true,
