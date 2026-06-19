@@ -27,6 +27,7 @@ export function retrieveServices(query: string, directoryRecords: ServiceRecord[
 
   const scoredRecords = directoryRecords
     .filter((record) => allowedCategoryIds.has(record.categoryId))
+    .filter((record) => recordMatchesRegionalContext(record, normalized))
     .map((record): ScoredRecord => {
       const searchable = [
         record.serviceName,
@@ -51,7 +52,7 @@ export function retrieveServices(query: string, directoryRecords: ServiceRecord[
 
       return {
         record,
-        score: categoryScore + keywordScore + explicitKeywordScore + verificationScore,
+        score: categoryScore + keywordScore + explicitKeywordScore + verificationScore + regionalBoost(record, normalized),
       };
     })
     .filter((item) => item.score > 0)
@@ -71,6 +72,54 @@ export function retrieveServices(query: string, directoryRecords: ServiceRecord[
     safetyNote: guardrail.safetyNote,
     blocksDecision: guardrail.blocksDecision,
   };
+}
+
+function recordMatchesRegionalContext(record: ServiceRecord, query: string) {
+  if (record.id.startsWith("usa-")) {
+    return mentionsUsa(query) || /\b(snap|food stamps|medicaid|chip|tanf|liheap|real id)\b/i.test(query);
+  }
+
+  if (record.id.startsWith("zim-")) {
+    if (mentionsUsa(query) && !mentionsZimbabwe(query)) return false;
+    if (mentionsZimbabwe(query)) return true;
+    return record.id === "zim-beam-education-assistance" && mentionsBeamLikeNeed(query);
+  }
+
+  return true;
+}
+
+function regionalBoost(record: ServiceRecord, query: string) {
+  if (record.id === "usa-snap-food-assistance") {
+    if (mentionsUsa(query) && mentionsFoodNeed(query)) return 12;
+    if (/\b(snap|food stamps)\b/i.test(query)) return 14;
+    if (/\b(parents?|family|household)\b.*\b(usa|united states|america)\b/i.test(query)) return 10;
+  }
+
+  if (record.id === "zim-beam-education-assistance") {
+    if (mentionsZimbabwe(query) && mentionsBeamLikeNeed(query)) return 12;
+    if (/\bbeam\b/i.test(query)) return 14;
+    if (mentionsBeamLikeNeed(query)) return 6;
+  }
+
+  return 0;
+}
+
+function mentionsUsa(query: string) {
+  return /\b(usa|u\.s\.a\.|us\b|u\.s\.|united states|america|american)\b/i.test(query);
+}
+
+function mentionsZimbabwe(query: string) {
+  return /\b(zimbabwe|zim\b|mutare|harare|bulawayo|gweru|masvingo)\b/i.test(query);
+}
+
+function mentionsFoodNeed(query: string) {
+  return /\b(food|groceries|meal|hungry|nutrition|eat)\b/i.test(query);
+}
+
+function mentionsBeamLikeNeed(query: string) {
+  return /\b(beam|school fees|school fee|fees|orphan|vulnerable child|no guardian|no caretaker|no one takes care|child|learner)\b/i.test(
+    query,
+  );
 }
 
 export function buildFallbackGuidance(query: string, retrieval: RetrievalResult): BenefitsGuidance {

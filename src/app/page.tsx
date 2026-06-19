@@ -194,14 +194,19 @@ export default function Home() {
         </div>
       </section>
 
-      <section id="how-it-works" className="bg-[#808080] px-5 pb-16 pt-16 text-white sm:px-8 lg:pt-36">
+      <section
+        id="how-it-works"
+        className="bg-[linear-gradient(180deg,#ffffed_0%,#ffffed_78%,#F6F1E7_100%)] px-5 pb-20 pt-16 text-[#244B35] sm:px-8 lg:pt-36"
+      >
         <div className="mx-auto max-w-7xl">
           <div className="sb-fade-up mx-auto max-w-4xl text-center">
-            <p className="text-sm font-black uppercase tracking-[0.2em] text-white/80">How it works</p>
-            <h2 className="mx-auto mt-3 max-w-4xl text-3xl font-black uppercase leading-[1.08] tracking-tight text-white sm:text-5xl lg:text-6xl">
-              We help users move from stress to clarity
+            <p className="text-sm font-black uppercase tracking-[0.2em] text-[#0B7777]">
+              <span className="sb-type-reveal sb-type-reveal-short">How it works</span>
+            </p>
+            <h2 className="mx-auto mt-3 max-w-4xl text-3xl font-black uppercase leading-[1.08] tracking-tight text-[#244B35] sm:text-5xl lg:text-6xl">
+              <span className="sb-type-reveal sb-type-reveal-delay">We help users move from stress to clarity</span>
             </h2>
-            <p className="mx-auto mt-5 max-w-3xl text-base font-semibold leading-8 text-white/82">
+            <p className="mx-auto mt-5 max-w-3xl text-base font-semibold leading-8 text-[#244B35]/72">
               Public support systems can be confusing, especially when users do not know the right program name,
               required documents, or office to contact. ServiceBridge AI asks simple questions, checks support pathways,
               and explains the next steps in plain language.
@@ -235,29 +240,6 @@ export default function Home() {
       </section>
 
       <ProgramCards />
-
-      <section id="responsible-ai" className="bg-[#F6F1E7] px-5 py-16 sm:px-8">
-        <div className="sb-card-lift mx-auto grid max-w-7xl gap-6 rounded-[2rem] bg-[#244B35] p-6 text-white shadow-[0_24px_70px_rgba(16,35,25,0.15)] sm:p-8 lg:grid-cols-[1fr_auto] lg:items-center">
-          <div>
-            <p className="text-sm font-black uppercase tracking-[0.2em] text-white/65">Responsible AI</p>
-            <h2 className="mt-2 text-3xl font-black uppercase tracking-tight sm:text-4xl">
-              Guidance only. Humans stay in control.
-            </h2>
-            <p className="mt-4 max-w-3xl text-sm font-semibold leading-7 text-white/78">
-              ServiceBridge AI never approves eligibility, invents official requirements, or replaces legal, medical,
-              emergency, or public-service decisions. It prepares users for verification with official offices and human
-              advisors.
-            </p>
-          </div>
-          <Link
-            href="/intake"
-            className="sb-button-motion inline-flex w-fit items-center justify-center gap-2 rounded-full bg-white px-6 py-4 text-sm font-black text-[#244B35] transition hover:bg-[#F6F1E7]"
-          >
-            Start guided check
-            <ArrowRight className="size-4" />
-          </Link>
-        </div>
-      </section>
     </main>
   );
 }

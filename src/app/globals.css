@@ -47,6 +47,22 @@ html {
   animation: sb-hero-reveal 880ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
 }
 
+.sb-type-reveal {
+  animation: sb-type-reveal 1500ms steps(34, end) both;
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  vertical-align: bottom;
+}
+
+.sb-type-reveal-short {
+  animation-duration: 820ms;
+}
+
+.sb-type-reveal-delay {
+  animation-delay: 420ms;
+}
+
 .sb-float {
   animation: sb-float 4.6s ease-in-out infinite;
 }
@@ -186,6 +202,15 @@ html {
   to {
     opacity: 1;
     transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes sb-type-reveal {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
   }
 }
 

@@ -10,14 +10,13 @@ const navLinks = [
   { label: "Benefits", href: "#benefits" },
   { label: "How It Works", href: "#how-it-works" },
   { label: "Programs", href: "#programs" },
-  { label: "Responsible AI", href: "#responsible-ai" },
 ];
 
 export function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
-    <header className="sticky top-0 z-40 border-b border-[#244B35]/10 bg-white/95 backdrop-blur">
+    <header className="sticky top-0 z-40 border-b border-[#244B35]/10 bg-[#f2f0ef]/95 backdrop-blur">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-5 py-4 sm:px-8">
         <Link href="/" className="flex items-center gap-3">
           <span className="relative flex size-12 overflow-hidden rounded-2xl bg-[#F6F1E7] ring-1 ring-[#244B35]/10">
@@ -54,7 +53,7 @@ export function Navbar() {
       </div>
 
       {isOpen ? (
-        <div className="border-t border-[#244B35]/10 bg-white px-5 py-4 shadow-lg lg:hidden">
+        <div className="border-t border-[#244B35]/10 bg-[#f2f0ef] px-5 py-4 shadow-lg lg:hidden">
           <nav className="mx-auto grid max-w-7xl gap-2">
             {navLinks.map((link) => (
               <Link

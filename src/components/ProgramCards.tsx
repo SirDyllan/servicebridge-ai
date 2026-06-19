@@ -25,7 +25,10 @@ export function ProgramCards() {
   }
 
   return (
-    <section id="programs" className="overflow-hidden bg-[#FFFDF8] px-5 py-16 sm:px-8">
+    <section
+      id="programs"
+      className="overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(18,166,166,0.10),transparent_34%),linear-gradient(180deg,#F6F1E7_0%,#FFFFFF_48%,#F6F1E7_100%)] px-5 py-16 sm:px-8"
+    >
       <div className="mx-auto max-w-7xl">
         <div className="grid gap-5 lg:grid-cols-[0.82fr_1.18fr] lg:items-end">
           <div className="sb-fade-up">

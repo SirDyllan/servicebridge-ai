@@ -43,8 +43,8 @@ export function Hero() {
               <ShieldCheck className="size-4" />
               Welcome to ServiceBridge AI
             </div>
-            <h1 className="sb-fade-up-delay-1 max-w-3xl text-5xl font-black uppercase leading-[0.95] tracking-tight text-white sm:text-6xl lg:text-7xl">
-              Find public support you may be eligible for.
+            <h1 className="max-w-3xl text-5xl font-black uppercase leading-[0.95] tracking-tight text-white sm:text-6xl lg:text-7xl">
+              <span className="sb-type-reveal">Find public support you may be eligible for.</span>
             </h1>
             <p className="sb-fade-up-delay-2 mt-6 max-w-2xl text-base font-semibold leading-8 text-white/88 sm:text-lg">
               ServiceBridge AI turns confusing benefit rules into simple questions, document checklists, and safe next

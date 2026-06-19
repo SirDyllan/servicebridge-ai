@@ -106,6 +106,7 @@ export function GuidedIntake() {
   const currentStep = steps[stepIndex];
   const isLastStep = stepIndex === steps.length - 1;
   const canGenerate = Boolean(narrative.trim()) && !isSubmitting;
+  const progress = ((stepIndex + 1) / steps.length) * 100;
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -163,27 +164,40 @@ export function GuidedIntake() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="grid gap-6">
-      <section className="rounded-[2rem] border border-emerald-950/10 bg-white p-5 shadow-[0_22px_70px_rgba(15,23,42,0.07)] sm:p-8">
-        <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
+    <form onSubmit={handleSubmit} className="mx-auto grid max-w-5xl gap-5">
+      <section className="rounded-[1.5rem] border border-emerald-950/10 bg-white p-5 shadow-[0_18px_55px_rgba(15,23,42,0.06)] sm:p-6">
+        <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
           <div>
             <p className="text-sm font-black uppercase tracking-[0.22em] text-emerald-800">{currentStep.eyebrow}</p>
-            <h1 className="mt-3 max-w-3xl text-3xl font-black tracking-tight text-slate-950 sm:text-5xl">
+            <h1 className="mt-2 max-w-3xl text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">
               {currentStep.title}
             </h1>
-            <p className="mt-4 max-w-2xl text-sm leading-6 text-slate-600">{currentStep.description}</p>
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600">{currentStep.description}</p>
           </div>
           <button
             type="button"
             onClick={loadDemoScenario}
-            className="inline-flex w-fit items-center gap-2 rounded-2xl border border-emerald-900/15 bg-emerald-50 px-5 py-3 text-sm font-black text-emerald-900 shadow-sm transition hover:-translate-y-0.5 hover:bg-emerald-100"
+            className="inline-flex w-fit items-center gap-2 rounded-2xl border border-emerald-900/15 bg-emerald-50 px-4 py-3 text-sm font-black text-emerald-900 shadow-sm transition hover:-translate-y-0.5 hover:bg-emerald-100"
           >
             <Sparkles className="size-4" />
             Load demo scenario
           </button>
         </div>
 
-        <div className="mt-8 grid gap-2 sm:grid-cols-5">
+        <div className="mt-6">
+          <div className="mb-2 flex items-center justify-between text-xs font-black uppercase tracking-[0.14em] text-emerald-900">
+            <span>Progress</span>
+            <span>{Math.round(progress)}%</span>
+          </div>
+          <div className="h-2 overflow-hidden rounded-full bg-emerald-900/10">
+            <div
+              className="h-full rounded-full bg-emerald-800 transition-[width] duration-300 ease-out"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+        </div>
+
+        <div className="mt-5 grid gap-2 sm:grid-cols-5">
           {steps.map((step, index) => {
             const complete = index < stepIndex;
             const active = index === stepIndex;
@@ -193,7 +207,7 @@ export function GuidedIntake() {
                 key={step.eyebrow}
                 type="button"
                 onClick={() => setStepIndex(index)}
-                className={`flex items-center gap-2 rounded-2xl border px-3 py-3 text-left text-xs font-black transition ${
+                className={`flex items-center gap-2 rounded-2xl border px-3 py-2.5 text-left text-xs font-black transition ${
                   active
                     ? "border-emerald-800 bg-emerald-800 text-white shadow-lg shadow-emerald-950/10"
                     : complete
@@ -209,7 +223,7 @@ export function GuidedIntake() {
         </div>
       </section>
 
-      <section className="rounded-[2rem] border border-emerald-950/10 bg-white p-5 shadow-[0_18px_55px_rgba(15,23,42,0.05)] sm:p-8">
+      <section className="rounded-[1.5rem] border border-emerald-950/10 bg-white p-5 shadow-[0_14px_44px_rgba(15,23,42,0.05)] sm:p-6">
         {stepIndex === 0 ? <SituationStep intake={intake} updateField={updateField} /> : null}
         {stepIndex === 1 ? <ProfileStep intake={intake} updateField={updateField} /> : null}
         {stepIndex === 2 ? <DocumentsStep intake={intake} updateField={updateField} /> : null}
@@ -223,7 +237,7 @@ export function GuidedIntake() {
         </div>
       ) : null}
 
-      <div className="flex flex-col justify-between gap-3 rounded-[2rem] border border-emerald-950/10 bg-[#eaf7ef] p-5 sm:flex-row sm:items-center">
+      <div className="flex flex-col justify-between gap-3 rounded-[1.5rem] border border-emerald-950/10 bg-[#eaf7ef] p-4 sm:flex-row sm:items-center">
         <p className="text-sm font-semibold leading-6 text-emerald-950">
           {isLastStep
             ? "This submits to the OpenAI-first guidance API. If the key is missing or fails, the grounded fallback keeps the demo safe."
@@ -234,7 +248,7 @@ export function GuidedIntake() {
             type="button"
             disabled={stepIndex === 0 || isSubmitting}
             onClick={() => setStepIndex((current) => Math.max(current - 1, 0))}
-            className="inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-900/15 bg-white px-5 py-4 text-sm font-black text-emerald-900 transition hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-40"
+            className="inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-900/15 bg-white px-5 py-3 text-sm font-black text-emerald-900 transition hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-40"
           >
             <ChevronLeft className="size-4" />
             Back
@@ -242,7 +256,7 @@ export function GuidedIntake() {
           <button
             type="submit"
             disabled={isLastStep ? !canGenerate : isSubmitting}
-            className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-800 px-6 py-4 text-sm font-black text-white transition hover:bg-emerald-900 disabled:cursor-not-allowed disabled:bg-slate-400"
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-800 px-6 py-3 text-sm font-black text-white transition hover:bg-emerald-900 disabled:cursor-not-allowed disabled:bg-slate-400"
           >
             {isSubmitting ? <Loader2 className="size-4 animate-spin" /> : <ArrowRight className="size-4" />}
             {isLastStep ? "Generate OpenAI guidance" : "Continue"}
@@ -267,7 +281,7 @@ function SituationStep({
         value={intake.freeText}
         onChange={(event) => updateField("freeText", event.target.value)}
         placeholder="Example: I am 18, I am a student, I lost my part-time job, and I need help with food and school expenses. I do not have an ID yet."
-        className="mt-3 min-h-56 w-full rounded-3xl border border-slate-200 bg-slate-50 px-5 py-4 text-base leading-7 text-slate-900 outline-none transition focus:border-emerald-700 focus:bg-white focus:ring-4 focus:ring-emerald-700/10"
+        className="mt-3 min-h-40 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm leading-7 text-slate-900 outline-none transition focus:border-emerald-700 focus:bg-white focus:ring-4 focus:ring-emerald-700/10"
       />
       <p className="mt-3 text-xs font-semibold text-slate-500">
         Tip: short and real is best. The AI will classify needs, retrieve benefit records, and explain uncertainty.
