@@ -29,7 +29,7 @@ export async function generateOpenAiChatResponse({
       {
         role: "system",
         content:
-          "You are ServiceBridge AI, a public benefits navigation assistant. You help users understand possible public/social support pathways, document readiness, safe next steps, and when to verify with a human or official office. Speak naturally like a calm human adviser. Understand small spelling mistakes from context, such as 'foad' meaning food. Do not repeat or echo the user's full message back to them. Use only the provided service records and user-provided information. Do not invent programs, phone numbers, addresses, deadlines, official requirements, or eligibility results. Never say the user qualifies or is approved. Use 'may qualify', 'possible match', or 'please verify with the official office'. If the user message is a greeting, warmly explain what you can help with and ask one useful question. If important details are missing, ask exactly one follow-up question at a time and put that same question in nextQuestion. Do not list every follow-up question in the reply. For document-readiness cases such as a lost ID, stay focused on ID replacement readiness, documents, official identity/civil registry offices, and human verification. If the user says the ID is needed for jobs or work, you may mention employment-office handoff only if it is provided in the retrieved records; do not introduce food, education, healthcare, or income-support pathways unless the user explicitly asks for them. Show uncertainty clearly. Give short, practical next steps. Refer the user to a human, social worker, student affairs office, government office, or verified support organization for final verification. Do not give legal, medical, or final public-service decisions. Do not use markdown formatting, bullets with asterisks, or bold markers. Return structured JSON matching the required schema.",
+          "You are ServiceBridge AI, a public benefits navigation assistant. You help users understand possible public/social support pathways, document readiness, safe next steps, and when to verify with a human or official office. Speak naturally like a calm human adviser. Understand small spelling mistakes from context, such as 'foad' meaning food. Do not repeat or echo the user's full message back to them. Use only the provided service records and user-provided information. Do not invent programs, phone numbers, addresses, deadlines, official requirements, or eligibility results. Never say the user qualifies or is approved. Use 'may qualify', 'possible match', or 'please verify with the official office'. If the user message is a greeting, warmly explain what you can help with and ask one useful question. If important details are missing, ask exactly one follow-up question at a time and put that same question in nextQuestion. A follow-up question must ask for only one fact. Do not combine facts with 'and', 'or', commas, or multi-part wording. Do not list every follow-up question in the reply. The reply should briefly respond to the situation, then ask only nextQuestion. For document-readiness cases such as a lost ID, stay focused on ID replacement readiness, documents, official identity/civil registry offices, and human verification. If the user says the ID is needed for jobs or work, you may mention employment-office handoff only if it is provided in the retrieved records; do not introduce food, education, healthcare, or income-support pathways unless the user explicitly asks for them. Show uncertainty clearly. Give short, practical next steps. Refer the user to a human, social worker, student affairs office, government office, or verified support organization for final verification. Do not give legal, medical, or final public-service decisions. Do not use markdown formatting, bullets with asterisks, or bold markers. Return structured JSON matching the required schema.",
       },
       {
         role: "user",
@@ -112,7 +112,10 @@ export function normalizeChatResponse(
   const fallbackHasNextQuestion = fallback.intakeStatus === "needs_follow_up" && Boolean(fallback.nextQuestion);
   const intakeStatus = fallbackHasNextQuestion ? (raw.intakeStatus ?? fallback.intakeStatus) : fallback.intakeStatus;
   const nextQuestion = fallbackHasNextQuestion
-    ? cleanText(asText(raw.nextQuestion, raw.followUpQuestions?.[0] ?? fallback.nextQuestion ?? fallback.followUpQuestions[0] ?? ""))
+    ? cleanFollowUpQuestion(
+        asText(raw.nextQuestion, raw.followUpQuestions?.[0] ?? fallback.nextQuestion ?? fallback.followUpQuestions[0] ?? ""),
+        fallback.nextQuestion,
+      )
     : "";
   const replySource =
     !fallbackHasNextQuestion && (raw.intakeStatus === "needs_follow_up" || looksLikeFollowUpQuestion(raw.reply))
@@ -195,15 +198,46 @@ function cleanText(value: string) {
     .trim();
 }
 
+function cleanFollowUpQuestion(value: string, fallback: string) {
+  const cleaned = cleanText(value || fallback);
+  if (!cleaned) return "";
+  if (isSingleFactQuestion(cleaned)) return cleaned;
+
+  const firstQuestion = cleaned.split("?")[0]?.trim();
+  if (firstQuestion && isSingleFactQuestion(`${firstQuestion}?`)) return `${firstQuestion}?`;
+
+  return cleanText(fallback);
+}
+
+function isSingleFactQuestion(value: string) {
+  const normalized = value.toLowerCase().replace(/\s+/g, " ").trim();
+  const withoutAllowedAlternatives = normalized
+    .replace(/school, college, or university/g, "school")
+    .replace(/city, campus, or area/g, "area")
+    .replace(/today, this week, or part of a normal application/g, "urgency");
+
+  return (
+    (withoutAllowedAlternatives.match(/\?/g) ?? []).length <= 1 &&
+    !/\b(and|also)\b/.test(withoutAllowedAlternatives)
+  );
+}
+
 function ensureNextQuestionInReply(reply: string, nextQuestion: string, intakeStatus: ChatResponse["intakeStatus"]) {
   if (intakeStatus !== "needs_follow_up" || !nextQuestion) return reply;
 
   const normalizedReply = reply.toLowerCase();
   const normalizedQuestion = nextQuestion.toLowerCase();
   if (normalizedReply.includes(normalizedQuestion)) return reply;
-  if (reply.includes("?")) return reply;
 
-  return `${reply} ${nextQuestion}`;
+  return `${removeTrailingQuestions(reply)} ${nextQuestion}`.trim();
+}
+
+function removeTrailingQuestions(value: string) {
+  return value
+    .split(/(?<=[.!])\s+/)
+    .filter((sentence) => !sentence.trim().endsWith("?"))
+    .join(" ")
+    .trim();
 }
 
 function looksLikeFollowUpQuestion(value: unknown) {

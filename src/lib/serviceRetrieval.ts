@@ -206,8 +206,12 @@ function buildFollowUpQuestions(
     );
   }
 
-  if (normalized.includes("student") && !normalized.includes("proof of enrollment") && !normalized.includes("student letter")) {
-    questions.push("Are you currently enrolled at a school, college, or university, and can you get proof of enrollment?");
+  if (normalized.includes("student") && !mentionsEnrollmentStatus(normalized)) {
+    questions.push("Are you currently enrolled at a school, college, or university?");
+  }
+
+  if (normalized.includes("student") && mentionsEnrollmentStatus(normalized) && !mentionsProofOfEnrollment(normalized)) {
+    questions.push("Can you get proof of enrollment, such as a student letter, registration record, or school email?");
   }
 
   if (!mentionsLocation(normalized)) {
@@ -237,6 +241,16 @@ function mentionsUrgency(message: string) {
 
 function mentionsIdentityDocument(message: string) {
   return /\b(id|identity|document|documents|birth certificate)\b/i.test(message);
+}
+
+function mentionsEnrollmentStatus(message: string) {
+  return /\b(enrolled|registered|not enrolled|no longer enrolled|student at|study at|attend|attending)\b/i.test(message);
+}
+
+function mentionsProofOfEnrollment(message: string) {
+  return /\b(proof of enrollment|proof of enrolment|student letter|registration record|school email|enrollment letter|enrolment letter)\b/i.test(
+    message,
+  );
 }
 
 function mentionsBirthCertificate(message: string) {

@@ -73,10 +73,9 @@ function sanitizeHistory(history: ChatRequest["history"]): ChatMessage[] {
 }
 
 function buildContextText(message: string, history: ChatMessage[]) {
-  const recentUserMessages = history
-    .filter((item) => item.role === "user")
-    .map((item) => item.content)
-    .slice(-8);
+  const recentConversation = history
+    .slice(-8)
+    .map((item) => `${item.role}: ${item.content}`);
 
-  return [...recentUserMessages, message].join("\n");
+  return [...recentConversation, `user: ${message}`].join("\n");
 }
