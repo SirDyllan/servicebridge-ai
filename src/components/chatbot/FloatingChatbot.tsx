@@ -343,7 +343,7 @@ function StructuredResponse({
     response.documentChecklist.missing.length > 0 ||
     !needIsNotClear;
 
-  if (response.intakeStatus === "needs_follow_up" && response.matches.length === 0) return null;
+  if (response.intakeStatus === "needs_follow_up") return null;
   if (needIsNotClear && response.matches.length === 0) return null;
   if (!hasPathwayDetails) return null;
 
@@ -491,8 +491,10 @@ function DocumentQuickOption({
 }
 
 function getDocumentQuickCheckItems(response: ChatResponse) {
+  const knownMissingKeys = new Set(response.documentChecklist.missing.map((documentName) => {
+    return normalizeDocumentKey(cleanDocumentName(documentName));
+  }));
   const likelyDocuments = [
-    ...response.documentChecklist.missing,
     ...response.classification.documentIssues,
     ...response.documentChecklist.needed,
     ...response.matches.flatMap((match) => match.documentsNeeded),
@@ -503,7 +505,7 @@ function getDocumentQuickCheckItems(response: ChatResponse) {
   likelyDocuments.forEach((documentName) => {
     const cleaned = cleanDocumentName(documentName);
     const key = normalizeDocumentKey(cleaned);
-    if (!key || normalized.has(key)) return;
+    if (!key || normalized.has(key) || knownMissingKeys.has(key)) return;
     normalized.set(key, cleaned);
   });
 

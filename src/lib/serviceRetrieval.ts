@@ -244,7 +244,9 @@ function mentionsIdentityDocument(message: string) {
 }
 
 function mentionsEnrollmentStatus(message: string) {
-  return /\b(enrolled|registered|not enrolled|no longer enrolled|student at|study at|attend|attending)\b/i.test(message);
+  return /\b(enrolled|registered|not enrolled|no longer enrolled|student at|study at|attend|attending|i am a student|i'm a student|im a student)\b/i.test(
+    message,
+  );
 }
 
 function mentionsProofOfEnrollment(message: string) {
