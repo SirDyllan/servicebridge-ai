@@ -72,6 +72,10 @@ export type BenefitMatch = {
   uncertaintyNote: string;
   location: string;
   coordinates?: Coordinates;
+  officialProgramUrl?: string;
+  officeSearchUrl?: string;
+  applicationUrl?: string;
+  lastVerified?: string;
 };
 
 export type DocumentChecklistItem = {

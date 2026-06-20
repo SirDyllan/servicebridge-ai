@@ -391,6 +391,7 @@ function recordToMatch(record: ServiceRecord, query: string, index: number): Ben
         : "This MVP record is not final source-of-truth data; verify requirements with the listed office or a human adviser.",
     location: record.location,
     coordinates: record.coordinates,
+    lastVerified: record.lastVerified,
   };
 }
 
@@ -478,11 +479,15 @@ function normalizeMatches(raw: unknown, fallback: BenefitMatch[]): BenefitMatch[
         nextSteps: asStringArray(match.nextSteps, fallback[index]?.nextSteps ?? []),
         sourceLabel: asText(match.sourceLabel, fallback[index]?.sourceLabel ?? "MVP sample record"),
         sourceUrl: asText(match.sourceUrl, fallback[index]?.sourceUrl ?? ""),
+        officialProgramUrl: asText(match.officialProgramUrl, fallback[index]?.officialProgramUrl ?? ""),
+        officeSearchUrl: asText(match.officeSearchUrl, fallback[index]?.officeSearchUrl ?? ""),
+        applicationUrl: asText(match.applicationUrl, fallback[index]?.applicationUrl ?? ""),
         verificationStatus: match.verificationStatus ?? fallback[index]?.verificationStatus ?? "sample",
         matchLevel: match.matchLevel ?? fallback[index]?.matchLevel ?? "Medium",
         uncertaintyNote: asText(match.uncertaintyNote, fallback[index]?.uncertaintyNote ?? "Please verify with an official office."),
         location: asText(match.location, fallback[index]?.location ?? "Official or human support office"),
         coordinates: match.coordinates ?? fallback[index]?.coordinates,
+        lastVerified: asText(match.lastVerified, fallback[index]?.lastVerified ?? ""),
       } satisfies BenefitMatch;
     })
     .filter((match): match is BenefitMatch => Boolean(match));

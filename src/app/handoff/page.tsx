@@ -29,12 +29,14 @@ export default async function HandoffPage({ searchParams }: HandoffPageProps) {
           <div className="absolute inset-0 bg-[url('/images/search.jpg')] bg-cover bg-center" />
           <div className="absolute inset-0 bg-gradient-to-r from-[#244B35]/92 via-[#244B35]/58 to-[#0B2D4D]/20" />
           <div className="relative z-10 flex min-h-[360px] flex-col justify-center px-6 py-12 text-white sm:px-10 lg:px-14">
-            <p className="text-sm font-black uppercase tracking-[0.24em] text-white/80">Service Bridge AI</p>
-            <h1 className="mt-4 text-5xl font-black uppercase tracking-tight sm:text-7xl">Search Zone</h1>
+            <p className="text-sm font-black uppercase tracking-[0.24em] text-white/80">ServiceBridge AI</p>
+            <h1 className="mt-4 max-w-4xl text-4xl font-black uppercase tracking-tight sm:text-6xl lg:text-7xl">
+              Verify With a Human
+            </h1>
             <div className="mt-6 flex flex-wrap gap-2">
               <Badge label={`Need: ${need}`} />
               <Badge label={`Location: ${location || "not provided yet"}`} />
-              <Badge label={mode === "human" ? "Speak to human" : "Find nearby office"} />
+              <Badge label={mode === "human" ? "Human verification" : "Office type guidance"} />
             </div>
           </div>
         </section>

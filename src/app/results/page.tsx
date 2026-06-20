@@ -2,8 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { ArrowLeft, ClipboardList, Loader2 } from "lucide-react";
-import { DocumentChecklist } from "@/components/DocumentChecklist";
+import { ArrowLeft, ClipboardList, Loader2, ShieldCheck } from "lucide-react";
 import { FeedbackForm } from "@/components/FeedbackForm";
 import { HumanReferralCard } from "@/components/HumanReferralCard";
 import { ResultCard } from "@/components/ResultCard";
@@ -75,35 +74,42 @@ export default function ResultsPage() {
   const guidance = response.guidance;
 
   return (
-    <main className="min-h-screen bg-[#f7faf8] px-5 pb-36 pt-6 text-slate-950 sm:px-8 sm:pb-40 sm:pt-10">
+    <main className="min-h-screen bg-[#F6F1E7] px-5 pb-36 pt-6 text-[#244B35] sm:px-8 sm:pb-40 sm:pt-10">
       <div className="mx-auto max-w-6xl">
         <div className="mb-6 flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
           <Link
             href="/intake"
-            className="inline-flex w-fit items-center gap-2 rounded-xl border border-emerald-950/10 bg-white px-4 py-3 text-sm font-black text-emerald-900 transition hover:bg-emerald-50"
+            className="inline-flex w-fit items-center gap-2 rounded-xl border border-[#244B35]/10 bg-white px-4 py-3 text-sm font-black text-[#244B35] transition hover:bg-[#FFFDF8]"
           >
             <ArrowLeft className="size-4" />
             Back to intake
           </Link>
           <div className="flex flex-wrap gap-2">
-            <span className="rounded-full bg-white px-3 py-2 text-xs font-black text-slate-700 ring-1 ring-emerald-950/10">
+            <span className="rounded-full bg-white px-3 py-2 text-xs font-black text-[#244B35]/70 ring-1 ring-[#244B35]/10">
               Provider: {response.provider}
             </span>
-            <span className="rounded-full bg-white px-3 py-2 text-xs font-black text-slate-700 ring-1 ring-emerald-950/10">
+            <span className="rounded-full bg-white px-3 py-2 text-xs font-black text-[#244B35]/70 ring-1 ring-[#244B35]/10">
               Directory: {response.directorySource ?? "local"}
             </span>
-            <span className="rounded-full bg-white px-3 py-2 text-xs font-black text-slate-700 ring-1 ring-emerald-950/10">
+            <span className="rounded-full bg-white px-3 py-2 text-xs font-black text-[#244B35]/70 ring-1 ring-[#244B35]/10">
               Coverage: {response.retrieval.coverage.replace("_", " ")}
             </span>
           </div>
         </div>
 
-        <section className="rounded-3xl border border-emerald-950/10 bg-white p-5 shadow-[0_18px_55px_rgba(15,23,42,0.06)] sm:p-7">
-          <p className="text-sm font-bold uppercase tracking-[0.18em] text-emerald-800">Guidance summary</p>
-          <h1 className="mt-2 text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">
-            Possible support pathways
-          </h1>
-          <p className="mt-4 max-w-4xl text-base leading-7 text-slate-700">{guidance.summary}</p>
+        <section className="rounded-[2rem] border border-[#244B35]/10 bg-white p-5 shadow-[0_20px_70px_rgba(16,35,25,0.08)] sm:p-8">
+          <p className="text-sm font-black uppercase tracking-[0.18em] text-[#12A6A6]">Your Support Guidance</p>
+          <div className="mt-3 flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
+            <div>
+              <h1 className="text-3xl font-black tracking-tight text-[#244B35] sm:text-5xl">
+                Possible support matches
+              </h1>
+              <p className="mt-4 max-w-4xl text-base font-semibold leading-7 text-[#244B35]/75">{guidance.summary}</p>
+            </div>
+            <div className="rounded-2xl bg-[#F6F1E7] p-4 text-sm font-black leading-6 text-[#244B35]">
+              AI guidance - source transparency - human verification
+            </div>
+          </div>
           {response.warning ? (
             <p className="mt-4 rounded-2xl bg-amber-50 p-4 text-sm font-semibold leading-6 text-amber-900">
               {response.warning}
@@ -114,52 +120,44 @@ export default function ResultsPage() {
             <InfoBox label="Urgency" value={response.retrieval.urgency} />
             <InfoBox label="Matched keywords" value={response.retrieval.matchedKeywords.join(", ") || "None yet"} />
           </div>
+          <p className="mt-5 rounded-2xl border border-[#12A6A6]/20 bg-[#E7F4F1] p-4 text-sm font-bold leading-6 text-[#244B35]">
+            This is guidance only. Eligibility and requirements must be verified with the official office.
+          </p>
         </section>
 
-        <div className="mt-6 grid gap-6">
+        <section className="mt-6 grid gap-6" aria-label="Possible support match results">
           {guidance.possibleMatches.map((match, index) => (
-            <ResultCard key={`${match.id}-${index}`} match={match} index={index} />
+            <ResultCard
+              key={`${match.id}-${index}`}
+              match={match}
+              index={index}
+              missingDocuments={guidance.documentReadiness.missingDocuments}
+            />
           ))}
+        </section>
+
+        <div className="my-8 flex items-center gap-4">
+          <div className="h-px flex-1 bg-[#244B35]/15" />
+          <div className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-xs font-black uppercase tracking-[0.12em] text-[#244B35] shadow-sm ring-1 ring-[#244B35]/10">
+            <ShieldCheck className="size-4 text-[#12A6A6]" />
+            Next: verify with a human
+          </div>
+          <div className="h-px flex-1 bg-[#244B35]/15" />
         </div>
 
-        <div className="mt-6 grid gap-6 lg:grid-cols-[1fr_0.9fr]">
-          <DocumentChecklist readiness={guidance.documentReadiness} />
-          <section className="rounded-3xl border border-emerald-950/10 bg-white p-5 shadow-[0_18px_55px_rgba(15,23,42,0.06)] sm:p-7">
-            <p className="text-sm font-bold uppercase tracking-[0.18em] text-emerald-800">Next steps</p>
-            <h2 className="mt-1 text-2xl font-black tracking-tight text-slate-950">What to do next</h2>
-            <ol className="mt-5 grid gap-3">
-              {guidance.nextSteps.map((step, index) => (
-                <li key={step} className="flex gap-3 text-sm leading-6 text-slate-700">
-                  <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-emerald-800 text-xs font-black text-white">
-                    {index + 1}
-                  </span>
-                  {step}
-                </li>
-              ))}
-            </ol>
-
-            <div className="mt-6 rounded-2xl bg-[#eef7f2] p-4">
-              <p className="text-sm font-black text-emerald-950">Useful follow-up questions</p>
-              <ul className="mt-3 grid gap-2">
-                {guidance.followUpQuestions.map((question) => (
-                  <li key={question} className="text-sm leading-6 text-emerald-950">
-                    {question}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </section>
-        </div>
-
-        <div className="mt-6 grid gap-6">
-          <HumanReferralCard referral={guidance.humanReferral} safetyNote={guidance.safetyNote} />
+        <section aria-label="Verify with a human" className="grid gap-6">
+          <HumanReferralCard
+            referral={guidance.humanReferral}
+            safetyNote={guidance.safetyNote}
+            primaryMatch={guidance.possibleMatches[0]}
+          />
           <FeedbackForm
             query={query}
             category={response.retrieval.categoryName}
             urgency={response.retrieval.urgency}
             provider={response.provider}
           />
-        </div>
+        </section>
       </div>
     </main>
   );
@@ -167,9 +165,9 @@ export default function ResultsPage() {
 
 function InfoBox({ label, value }: { label: string; value: string }) {
   return (
-    <div className="h-fit rounded-2xl bg-[#f4f8f5] p-4">
-      <p className="text-xs font-black uppercase tracking-[0.14em] text-emerald-800">{label}</p>
-      <p className="mt-2 text-sm font-black text-slate-950">{value}</p>
+    <div className="h-fit rounded-2xl bg-[#F6F1E7] p-4">
+      <p className="text-xs font-black uppercase tracking-[0.14em] text-[#12A6A6]">{label}</p>
+      <p className="mt-2 text-sm font-black text-[#244B35]">{value}</p>
     </div>
   );
 }
