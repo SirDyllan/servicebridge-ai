@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
-import { Bot, FileText, Loader2, MapPin, MessageCircle, Send, ShieldCheck, X } from "lucide-react";
+import { Bot, FileText, Loader2, MapPin, MessageCircle, Mic, Send, ShieldCheck, Volume2, VolumeX, X } from "lucide-react";
 import { buildIdentityOfficeSearchQuery } from "@/lib/officeRouting";
 import type { ChatMessage, ChatResponse } from "@/types/chat";
 
@@ -19,6 +19,37 @@ const welcomeMessage: UiMessage = {
 
 const defaultActions = ["Create checklist", "Show required documents", "Find nearby office", "Speak to human"];
 
+type SpeechRecognitionEventLike = {
+  results: {
+    length: number;
+    [index: number]: {
+      isFinal?: boolean;
+      length: number;
+      [index: number]: {
+        transcript: string;
+      };
+    };
+  };
+};
+
+type SpeechRecognitionLike = {
+  lang: string;
+  continuous: boolean;
+  interimResults: boolean;
+  start: () => void;
+  stop: () => void;
+  abort: () => void;
+  onresult: ((event: SpeechRecognitionEventLike) => void) | null;
+  onerror: (() => void) | null;
+  onend: (() => void) | null;
+};
+
+type SpeechRecognitionWindow = Window &
+  typeof globalThis & {
+    SpeechRecognition?: new () => SpeechRecognitionLike;
+    webkitSpeechRecognition?: new () => SpeechRecognitionLike;
+  };
+
 export function FloatingChatbot() {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<UiMessage[]>([welcomeMessage]);
@@ -26,10 +57,17 @@ export function FloatingChatbot() {
   const [isLoading, setIsLoading] = useState(false);
   const [actionStatus, setActionStatus] = useState("");
   const [hasBotImage, setHasBotImage] = useState(true);
+  const [isListening, setIsListening] = useState(false);
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [voiceStatus, setVoiceStatus] = useState("");
   const panelRef = useRef<HTMLDivElement>(null);
+  const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
 
   const lastResponse = useMemo(() => {
     return [...messages].reverse().find((message) => message.response)?.response;
+  }, [messages]);
+  const lastAssistantText = useMemo(() => {
+    return [...messages].reverse().find((message) => message.role === "assistant")?.content ?? "";
   }, [messages]);
 
   useEffect(() => {
@@ -43,6 +81,13 @@ export function FloatingChatbot() {
     window.addEventListener("hashchange", openFromHash);
 
     return () => window.removeEventListener("hashchange", openFromHash);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      recognitionRef.current?.abort();
+      window.speechSynthesis?.cancel();
+    };
   }, []);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -101,14 +146,14 @@ export function FloatingChatbot() {
 
   async function handleAction(action: string) {
     if (action === "Find nearby office") {
-      setActionStatus("Opening curated office handoff...");
+      setActionStatus("Opening office guidance...");
       window.open(buildHandoffUrl("map", lastResponse, messages), "_blank", "noopener,noreferrer");
       window.setTimeout(() => setActionStatus(""), 1800);
       return;
     }
 
     if (action === "Speak to human") {
-      setActionStatus("Opening human handoff guide...");
+      setActionStatus("Opening human verification guide...");
       window.open(buildHandoffUrl("human", lastResponse, messages), "_blank", "noopener,noreferrer");
       window.setTimeout(() => setActionStatus(""), 1800);
       return;
@@ -127,6 +172,102 @@ export function FloatingChatbot() {
     }
 
     await sendMessage(action);
+  }
+
+  function getSpeechRecognition() {
+    const speechWindow = window as SpeechRecognitionWindow;
+    const Recognition = speechWindow.SpeechRecognition ?? speechWindow.webkitSpeechRecognition;
+    return Recognition ? new Recognition() : null;
+  }
+
+  function startVoiceInput() {
+    if (isLoading) return;
+
+    const recognition = getSpeechRecognition();
+    if (!recognition) {
+      setVoiceStatus("Voice input is not supported in this browser.");
+      return;
+    }
+
+    recognitionRef.current?.abort();
+    recognitionRef.current = recognition;
+    recognition.lang = "en-US";
+    recognition.continuous = false;
+    recognition.interimResults = true;
+    setVoiceStatus("Listening...");
+    setIsListening(true);
+
+    recognition.onresult = (event) => {
+      let transcript = "";
+      let finalTranscript = "";
+
+      for (let index = 0; index < event.results.length; index += 1) {
+        const result = event.results[index];
+        const phrase = result[0]?.transcript ?? "";
+        transcript += phrase;
+        if (result.isFinal) finalTranscript += phrase;
+      }
+
+      const captured = (finalTranscript || transcript).trim();
+      if (captured) setInput(captured);
+    };
+
+    recognition.onerror = () => {
+      setVoiceStatus("Voice input stopped. You can type instead.");
+      setIsListening(false);
+    };
+
+    recognition.onend = () => {
+      setIsListening(false);
+      setVoiceStatus((current) => (current === "Listening..." ? "Voice captured. Review before sending." : current));
+    };
+
+    try {
+      recognition.start();
+    } catch {
+      setVoiceStatus("Voice input could not start. You can type instead.");
+      setIsListening(false);
+    }
+  }
+
+  function stopVoiceInput() {
+    recognitionRef.current?.stop();
+    setIsListening(false);
+    setVoiceStatus("Voice captured. Review before sending.");
+  }
+
+  function speakText(text: string) {
+    const content = text.trim();
+    if (!content) return;
+
+    if (!window.speechSynthesis) {
+      setVoiceStatus("Read aloud is not supported in this browser.");
+      return;
+    }
+
+    if (isSpeaking) {
+      window.speechSynthesis.cancel();
+      setIsSpeaking(false);
+      setVoiceStatus("Read aloud stopped.");
+      return;
+    }
+
+    const utterance = new SpeechSynthesisUtterance(content);
+    utterance.rate = 0.95;
+    utterance.pitch = 1;
+    utterance.onend = () => {
+      setIsSpeaking(false);
+      setVoiceStatus("");
+    };
+    utterance.onerror = () => {
+      setIsSpeaking(false);
+      setVoiceStatus("Read aloud stopped.");
+    };
+
+    window.speechSynthesis.cancel();
+    window.speechSynthesis.speak(utterance);
+    setIsSpeaking(true);
+    setVoiceStatus("Reading aloud...");
   }
 
   return (
@@ -157,6 +298,8 @@ export function FloatingChatbot() {
                 key={`${message.role}-${index}`}
                 message={message}
                 messages={messages}
+                isSpeaking={isSpeaking}
+                onReadAloud={speakText}
               />
             ))}
             {isLoading ? (
@@ -186,6 +329,32 @@ export function FloatingChatbot() {
                 </button>
               ))}
             </div>
+            <div className="mb-3 grid gap-2 sm:grid-cols-2">
+              <button
+                type="button"
+                onClick={isListening ? stopVoiceInput : startVoiceInput}
+                disabled={isLoading}
+                className={`inline-flex items-center justify-center gap-2 rounded-xl px-3 py-2 text-xs font-black transition disabled:cursor-not-allowed disabled:opacity-60 ${
+                  isListening
+                    ? "bg-amber-100 text-amber-950"
+                    : "bg-slate-100 text-slate-700 hover:bg-emerald-50 hover:text-emerald-900"
+                }`}
+              >
+                <Mic className="size-3.5" />
+                {isListening ? "Stop listening" : "Voice input"}
+              </button>
+              <button
+                type="button"
+                onClick={() => speakText(lastAssistantText)}
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-100 px-3 py-2 text-xs font-black text-slate-700 transition hover:bg-emerald-50 hover:text-emerald-900"
+              >
+                {isSpeaking ? <VolumeX className="size-3.5" /> : <Volume2 className="size-3.5" />}
+                {isSpeaking ? "Stop audio" : "Read latest"}
+              </button>
+            </div>
+            {voiceStatus ? (
+              <p className="mb-3 rounded-xl bg-[#f7faf8] px-3 py-2 text-xs font-bold text-slate-600">{voiceStatus}</p>
+            ) : null}
             <form onSubmit={handleSubmit} className="flex gap-2">
               <input
                 value={input}
@@ -266,9 +435,13 @@ function BotAvatar({
 function ChatBubble({
   message,
   messages,
+  isSpeaking,
+  onReadAloud,
 }: {
   message: UiMessage;
   messages: UiMessage[];
+  isSpeaking: boolean;
+  onReadAloud: (text: string) => void;
 }) {
   const isUser = message.role === "user";
 
@@ -284,6 +457,16 @@ function ChatBubble({
         }`}
       >
         <MessageText text={message.content} />
+        {!isUser ? (
+          <button
+            type="button"
+            onClick={() => onReadAloud(message.content)}
+            className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-black text-slate-600 transition hover:bg-emerald-50 hover:text-emerald-900"
+          >
+            {isSpeaking ? <VolumeX className="size-3" /> : <Volume2 className="size-3" />}
+            {isSpeaking ? "Stop" : "Read aloud"}
+          </button>
+        ) : null}
         {message.response ? (
           <StructuredResponse
             response={message.response}
@@ -392,7 +575,7 @@ function StructuredResponse({
 
       <div className="flex items-center gap-2 text-[11px] font-semibold text-slate-500">
         <MapPin className="size-3" />
-        Office handoff uses curated office types, not invented addresses.
+        Uses office types and safe map searches, not invented addresses.
       </div>
 
       {response.matches.length ? (

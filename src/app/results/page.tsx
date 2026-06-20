@@ -84,17 +84,6 @@ export default function ResultsPage() {
             <ArrowLeft className="size-4" />
             Back to intake
           </Link>
-          <div className="flex flex-wrap gap-2">
-            <span className="rounded-full bg-white px-3 py-2 text-xs font-black text-[#244B35]/70 ring-1 ring-[#244B35]/10">
-              Provider: {response.provider}
-            </span>
-            <span className="rounded-full bg-white px-3 py-2 text-xs font-black text-[#244B35]/70 ring-1 ring-[#244B35]/10">
-              Directory: {response.directorySource ?? "local"}
-            </span>
-            <span className="rounded-full bg-white px-3 py-2 text-xs font-black text-[#244B35]/70 ring-1 ring-[#244B35]/10">
-              Coverage: {response.retrieval.coverage.replace("_", " ")}
-            </span>
-          </div>
         </div>
 
         <section className="rounded-[2rem] border border-[#244B35]/10 bg-white p-5 shadow-[0_20px_70px_rgba(16,35,25,0.08)] sm:p-8">
@@ -107,7 +96,7 @@ export default function ResultsPage() {
               <p className="mt-4 max-w-4xl text-base font-semibold leading-7 text-[#244B35]/75">{guidance.summary}</p>
             </div>
             <div className="rounded-2xl bg-[#F6F1E7] p-4 text-sm font-black leading-6 text-[#244B35]">
-              AI guidance - source transparency - human verification
+              Guidance first. Official verification second.
             </div>
           </div>
           {response.warning ? (
@@ -118,7 +107,10 @@ export default function ResultsPage() {
           <div className="mt-5 grid items-start gap-3 sm:grid-cols-3">
             <InfoBox label="Detected need" value={response.retrieval.categoryName} />
             <InfoBox label="Urgency" value={response.retrieval.urgency} />
-            <InfoBox label="Matched keywords" value={response.retrieval.matchedKeywords.join(", ") || "None yet"} />
+            <InfoBox
+              label="Helpful details found"
+              value={response.retrieval.matchedKeywords.join(", ") || "Still gathering details"}
+            />
           </div>
           <p className="mt-5 rounded-2xl border border-[#12A6A6]/20 bg-[#E7F4F1] p-4 text-sm font-bold leading-6 text-[#244B35]">
             This is guidance only. Eligibility and requirements must be verified with the official office.

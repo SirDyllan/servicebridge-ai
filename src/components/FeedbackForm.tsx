@@ -55,11 +55,10 @@ export function FeedbackForm({
   return (
     <section className="scroll-mb-40 rounded-3xl border border-emerald-950/10 bg-white p-5 shadow-[0_18px_55px_rgba(15,23,42,0.06)] sm:p-7">
       <div>
-        <p className="text-sm font-bold uppercase tracking-[0.18em] text-emerald-800">Feedback loop</p>
+        <p className="text-sm font-bold uppercase tracking-[0.18em] text-emerald-800">Improve guidance</p>
         <h2 className="mt-1 text-2xl font-black tracking-tight text-slate-950">Help improve this guidance</h2>
         <p className="mt-2 text-sm leading-6 text-slate-600">
-          Users can flag wrong, unclear, risky, or missing guidance so the team can improve source records and handoff
-          guidance.
+          Flag anything unclear, wrong, missing, or risky so the guidance can be reviewed and improved.
         </p>
       </div>
 
