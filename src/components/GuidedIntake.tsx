@@ -60,13 +60,8 @@ const steps = [
   },
   {
     eyebrow: "Step 3",
-    title: "Documents",
-    description: "This helps prepare a checklist before you speak with an office or adviser.",
-  },
-  {
-    eyebrow: "Step 4",
-    title: "Review",
-    description: "Check the summary, then generate possible pathways and safe next steps.",
+    title: "Documents + Generate Guidance",
+    description: "Answer what you know, then generate possible pathways and a document checklist.",
   },
 ];
 
@@ -201,7 +196,7 @@ export function GuidedIntake() {
           </div>
         </div>
 
-        <div className="mt-5 grid gap-2 sm:grid-cols-4">
+        <div className="mt-5 grid gap-2 sm:grid-cols-3">
           {steps.map((step, index) => {
             const complete = index < stepIndex;
             const active = index === stepIndex;
@@ -227,11 +222,13 @@ export function GuidedIntake() {
         </div>
       </section>
 
-      <section className="rounded-[1.5rem] border border-emerald-950/10 bg-white p-5 shadow-[0_14px_44px_rgba(15,23,42,0.05)] sm:p-6">
-        {stepIndex === 0 ? <SituationStep intake={intake} updateField={updateField} toggleSupport={toggleSupport} /> : null}
-        {stepIndex === 1 ? <BasicDetailsStep intake={intake} context={intakeContext} updateField={updateField} /> : null}
-        {stepIndex === 2 ? <DocumentsStep intake={intake} context={intakeContext} updateField={updateField} /> : null}
-        {stepIndex === 3 ? <ReviewStep intake={intake} narrative={narrative} /> : null}
+      <section className="grid gap-5 rounded-[1.5rem] border border-emerald-950/10 bg-white p-5 shadow-[0_14px_44px_rgba(15,23,42,0.05)] sm:p-6 lg:grid-cols-[minmax(0,1fr)_18rem]">
+        <div>
+          {stepIndex === 0 ? <SituationStep intake={intake} updateField={updateField} toggleSupport={toggleSupport} /> : null}
+          {stepIndex === 1 ? <BasicDetailsStep intake={intake} context={intakeContext} updateField={updateField} /> : null}
+          {stepIndex === 2 ? <DocumentsStep intake={intake} context={intakeContext} updateField={updateField} /> : null}
+        </div>
+        <LiveSummary intake={intake} narrative={narrative} />
       </section>
 
       {error ? (
@@ -490,44 +487,44 @@ function DocumentsStep({
   );
 }
 
-function ReviewStep({ intake, narrative }: { intake: IntakeFormData; narrative: string }) {
-  const details = [
-    ["Situation", intake.freeText || "Not provided"],
-    ["Support needed", intake.supportNeeded.length ? intake.supportNeeded.join(", ") : "Not selected"],
-    ["Location", intake.location || "Not provided"],
-    ["Basic details", [intake.age ? `${intake.age} years old` : "", intake.studentStatus, intake.employmentStatus, intake.urgency].filter(Boolean).join(", ")],
-    [
-      "Documents",
-      `ID: ${intake.hasId}, residence: ${intake.hasProofOfResidence}, student letter: ${intake.hasStudentLetter}, income proof: ${intake.hasProofOfIncome}`,
-    ],
+function LiveSummary({ intake, narrative }: { intake: IntakeFormData; narrative: string }) {
+  const summaryItems = [
+    ["Support", intake.supportNeeded.length ? intake.supportNeeded.join(", ") : "Not selected"],
+    ["Location", intake.location || "Not added"],
+    ["Urgency", intake.urgency === "unknown" ? "Not sure" : formatValue(intake.urgency)],
+    ["ID", intake.hasId === "unknown" ? "Not sure" : formatValue(intake.hasId)],
   ];
+  const situation = intake.freeText.trim();
 
   return (
-    <div className="grid gap-5">
-      <div className="rounded-3xl border border-emerald-900/10 bg-emerald-50 p-5">
-        <p className="text-sm font-black text-emerald-950">Ready to generate</p>
-        <p className="mt-2 text-sm font-semibold leading-6 text-emerald-900">
-          ServiceBridge AI will show possible support pathways, why they may fit, document readiness, next steps, and a
-          human verification note. This is guidance only, not approval.
-        </p>
-      </div>
-
-      <div className="grid gap-3">
-        {details.map(([label, value]) => (
-          <div key={label} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-            <p className="text-xs font-black uppercase tracking-[0.16em] text-emerald-800">{label}</p>
-            <p className="mt-2 text-sm font-semibold leading-6 text-slate-800">{value}</p>
+    <aside className="rounded-3xl border border-emerald-900/10 bg-emerald-50 p-4 lg:sticky lg:top-24 lg:self-start">
+      <p className="text-xs font-black uppercase tracking-[0.16em] text-emerald-800">Live summary</p>
+      <p className="mt-2 text-sm font-black leading-6 text-emerald-950">
+        {situation ? truncateText(situation, 110) : "Add a short situation or choose a support area."}
+      </p>
+      <div className="mt-4 grid gap-2">
+        {summaryItems.map(([label, value]) => (
+          <div key={label} className="rounded-2xl bg-white/80 p-3">
+            <p className="text-[11px] font-black uppercase tracking-[0.12em] text-emerald-800">{label}</p>
+            <p className="mt-1 text-xs font-bold leading-5 text-slate-700">{value}</p>
           </div>
         ))}
       </div>
-
       {!narrative.trim() ? (
-        <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm font-bold text-amber-950">
-          Add a short situation or choose at least one support area before generating guidance.
-        </div>
+        <p className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-xs font-bold leading-5 text-amber-950">
+          Add at least one detail before generating guidance.
+        </p>
       ) : null}
-    </div>
+    </aside>
   );
+}
+
+function truncateText(value: string, maxLength: number) {
+  return value.length > maxLength ? `${value.slice(0, maxLength - 1).trim()}...` : value;
+}
+
+function formatValue(value: string) {
+  return value.replace(/_/g, " ");
 }
 
 function TextField({
