@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { FormEvent, useMemo, useRef, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { Bot, FileText, Loader2, MapPin, MessageCircle, Send, ShieldCheck, X } from "lucide-react";
 import type { ChatMessage, ChatResponse } from "@/types/chat";
 
@@ -31,6 +31,19 @@ export function FloatingChatbot() {
   const lastResponse = useMemo(() => {
     return [...messages].reverse().find((message) => message.response)?.response;
   }, [messages]);
+
+  useEffect(() => {
+    function openFromHash() {
+      if (window.location.hash === "#chatbot") {
+        setIsOpen(true);
+      }
+    }
+
+    openFromHash();
+    window.addEventListener("hashchange", openFromHash);
+
+    return () => window.removeEventListener("hashchange", openFromHash);
+  }, []);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -117,7 +130,7 @@ export function FloatingChatbot() {
   }
 
   return (
-    <div className="fixed bottom-5 right-5 z-40">
+    <div id="chatbot" className="fixed bottom-5 right-5 z-40 scroll-mt-28">
       {isOpen ? (
         <div className="mb-4 flex h-[min(680px,calc(100vh-7rem))] w-[min(390px,calc(100vw-2rem))] flex-col overflow-hidden rounded-3xl border border-emerald-950/10 bg-white shadow-[0_24px_80px_rgba(15,23,42,0.22)]">
           <header className="flex items-center justify-between bg-emerald-900 px-4 py-4 text-white">
