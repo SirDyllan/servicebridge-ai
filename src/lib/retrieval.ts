@@ -26,7 +26,7 @@ export function retrieveServices(query: string, directoryRecords: ServiceRecord[
   const allowedCategoryIds = new Set(getRelatedCategoryIds(guardrail.categoryId));
 
   const scoredRecords = directoryRecords
-    .filter((record) => allowedCategoryIds.has(record.categoryId))
+    .filter((record) => allowedCategoryIds.has(record.categoryId) || regionalBoost(record, normalized) > 0)
     .filter((record) => recordMatchesRegionalContext(record, normalized))
     .map((record): ScoredRecord => {
       const searchable = [
@@ -76,13 +76,21 @@ export function retrieveServices(query: string, directoryRecords: ServiceRecord[
 
 function recordMatchesRegionalContext(record: ServiceRecord, query: string) {
   if (record.id.startsWith("usa-")) {
-    return mentionsUsa(query) || /\b(snap|food stamps|medicaid|chip|tanf|liheap|real id)\b/i.test(query);
+    return mentionsUsa(query) || /\b(snap|food stamps|medicaid|chip|tanf|liheap|real id|dmv)\b/i.test(query);
   }
 
   if (record.id.startsWith("zim-")) {
     if (mentionsUsa(query) && !mentionsZimbabwe(query)) return false;
+    if (record.id === "zim-beam-education-assistance") return mentionsZimbabwe(query) && mentionsBeamLikeNeed(query);
+    if (record.id === "zim-public-assistance-social-welfare") return mentionsZimbabwe(query) && mentionsSocialWelfareNeed(query);
+    if (record.id === "zim-id-replacement-civil-registry") return mentionsZimbabwe(query) && mentionsIdentityNeed(query);
+    if (record.id === "zim-public-health-facility-access") return mentionsZimbabwe(query) && mentionsHealthcareNeed(query);
+    if (record.id === "zim-women-sme-support") return mentionsZimbabwe(query) && mentionsBusinessNeed(query);
     if (mentionsZimbabwe(query)) return true;
-    return record.id === "zim-beam-education-assistance" && mentionsBeamLikeNeed(query);
+    return (
+      (record.id === "zim-beam-education-assistance" && mentionsBeamLikeNeed(query)) ||
+      (record.id === "zim-public-assistance-social-welfare" && mentionsSocialWelfareNeed(query))
+    );
   }
 
   return true;
@@ -99,6 +107,45 @@ function regionalBoost(record: ServiceRecord, query: string) {
     if (mentionsZimbabwe(query) && mentionsBeamLikeNeed(query)) return 12;
     if (/\bbeam\b/i.test(query)) return 14;
     if (mentionsBeamLikeNeed(query)) return 6;
+  }
+
+  if (record.id === "usa-medicaid-chip-healthcare") {
+    if (mentionsUsa(query) && mentionsHealthcareNeed(query)) return 12;
+    if (/\b(medicaid|chip)\b/i.test(query)) return 14;
+  }
+
+  if (record.id === "usa-tanf-family-assistance") {
+    if (mentionsUsa(query) && mentionsFamilyCashNeed(query)) return 12;
+    if (/\btanf\b/i.test(query)) return 14;
+  }
+
+  if (record.id === "usa-liheap-energy-assistance") {
+    if (mentionsUsa(query) && mentionsUtilityNeed(query)) return 12;
+    if (/\bliheap\b/i.test(query)) return 14;
+  }
+
+  if (record.id === "usa-real-id-document-readiness") {
+    if (mentionsUsa(query) && mentionsUsDocumentNeed(query)) return 12;
+    if (/\b(real id|state id|dmv)\b/i.test(query)) return 14;
+  }
+
+  if (record.id === "zim-public-assistance-social-welfare") {
+    if (mentionsZimbabwe(query) && mentionsSocialWelfareNeed(query)) return 12;
+    if (/\b(public assistance|social welfare|social development)\b/i.test(query)) return 14;
+  }
+
+  if (record.id === "zim-id-replacement-civil-registry") {
+    if (mentionsZimbabwe(query) && mentionsIdentityNeed(query)) return 12;
+    if (/\b(civil registry|national id|lost id|replace id)\b/i.test(query)) return 14;
+  }
+
+  if (record.id === "zim-public-health-facility-access") {
+    if (mentionsZimbabwe(query) && mentionsHealthcareNeed(query)) return 12;
+  }
+
+  if (record.id === "zim-women-sme-support") {
+    if (mentionsZimbabwe(query) && mentionsBusinessNeed(query)) return 12;
+    if (/\b(women affairs|sme)\b/i.test(query)) return 14;
   }
 
   return 0;
@@ -118,6 +165,44 @@ function mentionsFoodNeed(query: string) {
 
 function mentionsBeamLikeNeed(query: string) {
   return /\b(beam|school fees|school fee|fees|orphan|vulnerable child|no guardian|no caretaker|no one takes care|child|learner)\b/i.test(
+    query,
+  );
+}
+
+function mentionsHealthcareNeed(query: string) {
+  return /\b(health|healthcare|medical|clinic|hospital|doctor|medicine|prescription|pregnant|disability|coverage|insurance)\b/i.test(
+    query,
+  );
+}
+
+function mentionsFamilyCashNeed(query: string) {
+  return /\b(tanf|cash assistance|family|children|child|parent|caregiver|household|dependent|needy families)\b/i.test(query);
+}
+
+function mentionsUtilityNeed(query: string) {
+  return /\b(liheap|utility|utilities|electricity|energy|heating|cooling|shutoff|disconnect|power bill|water bill|bill)\b/i.test(
+    query,
+  );
+}
+
+function mentionsUsDocumentNeed(query: string) {
+  return /\b(real id|state id|dmv|driver'?s? license|license|social security|state residency)\b/i.test(query);
+}
+
+function mentionsSocialWelfareNeed(query: string) {
+  return /\b(public assistance|social welfare|social development|vulnerable|household|low income|disability|elderly|orphan|destitute)\b/i.test(
+    query,
+  );
+}
+
+function mentionsIdentityNeed(query: string) {
+  return /\b(national id|lost id|replace id|id replacement|civil registry|birth certificate|identity document|do not have an id|no id)\b/i.test(
+    query,
+  );
+}
+
+function mentionsBusinessNeed(query: string) {
+  return /\b(women affairs|sme|small business|business|entrepreneur|training|empowerment|project|group|startup|self employed)\b/i.test(
     query,
   );
 }
@@ -162,7 +247,7 @@ export function normalizeGuidance(raw: Partial<BenefitsGuidance>, fallback: Bene
   return {
     summary: asText(raw.summary, fallback.summary),
     followUpQuestions: asStringArray(raw.followUpQuestions, fallback.followUpQuestions),
-    possibleMatches: normalizeMatches(raw.possibleMatches, fallback.possibleMatches),
+    possibleMatches: rankMatchesLikeFallback(normalizeMatches(raw.possibleMatches, fallback.possibleMatches), fallback.possibleMatches),
     documentReadiness: {
       summary: asText(raw.documentReadiness?.summary, fallback.documentReadiness.summary),
       items: Array.isArray(raw.documentReadiness?.items) ? raw.documentReadiness.items : fallback.documentReadiness.items,
@@ -233,10 +318,30 @@ function buildDirectoryNote(coverage: RetrievalResult["coverage"], recordCount: 
 
 function getRelatedCategoryIds(categoryId: string) {
   const related: Record<string, string[]> = {
-    "food-support": ["food-support", "student-welfare", "document-readiness", "emergency-relief", "human-referral"],
-    "education-support": ["education-support", "student-welfare", "document-readiness", "employment-youth", "human-referral"],
+    "food-support": [
+      "food-support",
+      "student-welfare",
+      "document-readiness",
+      "emergency-relief",
+      "family-childcare",
+      "human-referral",
+    ],
+    "education-support": [
+      "education-support",
+      "student-welfare",
+      "document-readiness",
+      "employment-youth",
+      "family-childcare",
+      "human-referral",
+    ],
     "student-welfare": ["student-welfare", "food-support", "education-support", "document-readiness", "human-referral"],
-    "emergency-relief": ["emergency-relief", "food-support", "document-readiness", "human-referral"],
+    "emergency-relief": [
+      "emergency-relief",
+      "food-support",
+      "document-readiness",
+      "family-childcare",
+      "human-referral",
+    ],
     "document-readiness": [
       "document-readiness",
       "food-support",
@@ -245,9 +350,23 @@ function getRelatedCategoryIds(categoryId: string) {
       "employment-youth",
       "human-referral",
     ],
-    "healthcare-access": ["healthcare-access", "document-readiness", "human-referral"],
-    "employment-youth": ["employment-youth", "food-support", "education-support", "document-readiness", "human-referral"],
-    "family-childcare": ["family-childcare", "food-support", "document-readiness", "human-referral"],
+    "healthcare-access": ["healthcare-access", "family-childcare", "document-readiness", "human-referral"],
+    "employment-youth": [
+      "employment-youth",
+      "food-support",
+      "education-support",
+      "document-readiness",
+      "family-childcare",
+      "human-referral",
+    ],
+    "family-childcare": [
+      "family-childcare",
+      "food-support",
+      "education-support",
+      "emergency-relief",
+      "document-readiness",
+      "human-referral",
+    ],
     "human-referral": ["human-referral", "food-support", "document-readiness", "student-welfare"],
   };
 
@@ -367,6 +486,14 @@ function normalizeMatches(raw: unknown, fallback: BenefitMatch[]): BenefitMatch[
       } satisfies BenefitMatch;
     })
     .filter((match): match is BenefitMatch => Boolean(match));
+}
+
+function rankMatchesLikeFallback(matches: BenefitMatch[], fallback: BenefitMatch[]) {
+  const fallbackOrder = new Map(fallback.map((match, index) => [match.id, index]));
+
+  return [...matches].sort((left, right) => {
+    return (fallbackOrder.get(left.id) ?? 999) - (fallbackOrder.get(right.id) ?? 999);
+  });
 }
 
 function asText(value: unknown, fallback: string) {
