@@ -66,9 +66,6 @@ export function FloatingChatbot() {
   const lastResponse = useMemo(() => {
     return [...messages].reverse().find((message) => message.response)?.response;
   }, [messages]);
-  const lastAssistantText = useMemo(() => {
-    return [...messages].reverse().find((message) => message.role === "assistant")?.content ?? "";
-  }, [messages]);
 
   useEffect(() => {
     function openFromHash() {
@@ -329,29 +326,6 @@ export function FloatingChatbot() {
                 </button>
               ))}
             </div>
-            <div className="mb-3 grid gap-2 sm:grid-cols-2">
-              <button
-                type="button"
-                onClick={isListening ? stopVoiceInput : startVoiceInput}
-                disabled={isLoading}
-                className={`inline-flex items-center justify-center gap-2 rounded-xl px-3 py-2 text-xs font-black transition disabled:cursor-not-allowed disabled:opacity-60 ${
-                  isListening
-                    ? "bg-amber-100 text-amber-950"
-                    : "bg-slate-100 text-slate-700 hover:bg-emerald-50 hover:text-emerald-900"
-                }`}
-              >
-                <Mic className="size-3.5" />
-                {isListening ? "Stop listening" : "Voice input"}
-              </button>
-              <button
-                type="button"
-                onClick={() => speakText(lastAssistantText)}
-                className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-100 px-3 py-2 text-xs font-black text-slate-700 transition hover:bg-emerald-50 hover:text-emerald-900"
-              >
-                {isSpeaking ? <VolumeX className="size-3.5" /> : <Volume2 className="size-3.5" />}
-                {isSpeaking ? "Stop audio" : "Read latest"}
-              </button>
-            </div>
             {voiceStatus ? (
               <p className="mb-3 rounded-xl bg-[#f7faf8] px-3 py-2 text-xs font-bold text-slate-600">{voiceStatus}</p>
             ) : null}
@@ -362,6 +336,19 @@ export function FloatingChatbot() {
                 placeholder="Ask about food, school support, ID, documents..."
                 className="min-w-0 flex-1 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-700 focus:bg-white focus:ring-4 focus:ring-emerald-700/10"
               />
+              <button
+                type="button"
+                onClick={isListening ? stopVoiceInput : startVoiceInput}
+                disabled={isLoading}
+                aria-label={isListening ? "Stop voice input" : "Start voice input"}
+                className={`flex size-12 shrink-0 items-center justify-center rounded-2xl transition disabled:cursor-not-allowed disabled:opacity-60 ${
+                  isListening
+                    ? "bg-amber-100 text-amber-950"
+                    : "bg-slate-100 text-slate-700 hover:bg-emerald-50 hover:text-emerald-900"
+                }`}
+              >
+                <Mic className="size-4" />
+              </button>
               <button
                 type="submit"
                 disabled={isLoading || !input.trim()}

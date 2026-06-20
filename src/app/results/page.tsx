@@ -89,35 +89,31 @@ export default function ResultsPage() {
           </Link>
         </div>
 
-        <section className="rounded-[2rem] border border-[#244B35]/10 bg-white p-5 shadow-[0_20px_70px_rgba(16,35,25,0.08)] sm:p-8">
-          <p className="text-sm font-black uppercase tracking-[0.18em] text-[#12A6A6]">Your Support Guidance</p>
-          <div className="mt-3 flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
-            <div>
+        <section className="relative overflow-hidden rounded-[2rem] border border-[#244B35]/10 bg-white p-5 shadow-[0_20px_70px_rgba(16,35,25,0.08)] sm:p-8">
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-y-0 right-0 w-full bg-[url('/images/v.jpg')] bg-[length:250px_auto] bg-right-top bg-no-repeat opacity-10 sm:bg-[length:340px_auto] sm:opacity-14 lg:bg-[length:420px_auto]"
+          />
+          <div className="relative z-10">
+            <p className="text-sm font-black uppercase tracking-[0.18em] text-[#12A6A6]">Your Support Guidance</p>
+            <div className="mt-3">
               <h1 className="text-3xl font-black tracking-tight text-[#244B35] sm:text-5xl">
                 Possible support matches
               </h1>
               <p className="mt-4 max-w-4xl text-base font-semibold leading-7 text-[#244B35]/75">{guidance.summary}</p>
             </div>
-            <div className="rounded-2xl bg-[#F6F1E7] p-4 text-sm font-black leading-6 text-[#244B35]">
-              Guidance first. Official verification second.
+            {response.warning ? (
+              <p className="mt-4 rounded-2xl bg-amber-50 p-4 text-sm font-semibold leading-6 text-amber-900">
+                {response.warning}
+              </p>
+            ) : null}
+            <div className="mt-5 max-w-md">
+              <InfoBox label="Detected need" value={response.retrieval.categoryName} />
             </div>
-          </div>
-          {response.warning ? (
-            <p className="mt-4 rounded-2xl bg-amber-50 p-4 text-sm font-semibold leading-6 text-amber-900">
-              {response.warning}
+            <p className="mt-5 rounded-2xl border border-[#12A6A6]/20 bg-[#E7F4F1] p-4 text-sm font-bold leading-6 text-[#244B35]">
+              This is guidance only. Eligibility and requirements must be verified with the official office.
             </p>
-          ) : null}
-          <div className="mt-5 grid items-start gap-3 sm:grid-cols-3">
-            <InfoBox label="Detected need" value={response.retrieval.categoryName} />
-            <InfoBox label="Urgency" value={response.retrieval.urgency} />
-            <InfoBox
-              label="Helpful details found"
-              value={response.retrieval.matchedKeywords.join(", ") || "Still gathering details"}
-            />
           </div>
-          <p className="mt-5 rounded-2xl border border-[#12A6A6]/20 bg-[#E7F4F1] p-4 text-sm font-bold leading-6 text-[#244B35]">
-            This is guidance only. Eligibility and requirements must be verified with the official office.
-          </p>
         </section>
 
         <section className="mt-6 grid gap-6" aria-label="Possible support match results">

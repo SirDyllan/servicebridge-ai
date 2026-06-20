@@ -1,6 +1,6 @@
 "use client";
 
-import { ExternalLink, Filter, MapPin, ShieldCheck } from "lucide-react";
+import { ExternalLink, Filter, ShieldCheck } from "lucide-react";
 import { useMemo, useState } from "react";
 import { serviceRecords } from "@/data/service-directory";
 import type { ServiceRecord } from "@/types/benefits";
@@ -65,35 +65,11 @@ export function BenefitsMap({ location, initialNeed }: { location?: string; init
       </div>
 
       <div className="mt-5 grid gap-5 lg:grid-cols-[0.82fr_1.18fr]">
-        <div className="relative min-h-[360px] overflow-hidden rounded-[1.5rem] bg-[#244B35] p-5 text-white">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(18,166,166,0.32),transparent_28%),radial-gradient(circle_at_74%_70%,rgba(184,121,58,0.30),transparent_28%)]" />
-          <div className="relative z-10 flex h-full flex-col justify-between">
-            <div>
-              <div className="inline-flex items-center gap-2 rounded-full bg-white/12 px-4 py-2 text-xs font-black uppercase tracking-[0.16em] text-white backdrop-blur">
-                <MapPin className="size-4" />
-                Simple map mode
-              </div>
-              <h3 className="mt-5 text-3xl font-black tracking-tight">Curated office search</h3>
-              <p className="mt-3 text-sm font-semibold leading-7 text-white/78">
-                For the hackathon MVP, this is intentionally safer than an embedded map: users see official office
-                types, source labels, verification status, and then choose a Google Maps search.
-              </p>
-            </div>
-            <div className="mt-8 grid gap-3">
-              {items.slice(0, 3).map((item, index) => (
-                <div
-                  key={`${item.id}-pin`}
-                  className="flex items-center gap-3 rounded-2xl bg-white/12 p-3 text-sm font-black backdrop-blur"
-                >
-                  <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-white text-[#244B35]">
-                    {index + 1}
-                  </span>
-                  {item.serviceName}
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
+        <div
+          aria-label="ServiceBridge AI idea illustration"
+          className="min-h-[360px] overflow-hidden rounded-[1.5rem] border border-[#244B35]/10 bg-white bg-[url('/images/p.jpg')] bg-contain bg-center bg-no-repeat shadow-inner"
+          role="img"
+        />
 
         <div className="grid gap-3">
           {items.map((item) => {
