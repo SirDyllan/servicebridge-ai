@@ -4,7 +4,7 @@ import Image from "next/image";
 import { useSyncExternalStore } from "react";
 import { ShieldCheck } from "lucide-react";
 
-const storageKey = "servicebridge:responsible-ai-acknowledged";
+const storageKey = "servicebridge:responsible-ai-acknowledged:v2";
 const changeEventName = "servicebridge:responsible-ai-changed";
 
 export function ResponsibleAiGate() {

@@ -67,7 +67,7 @@ export function BenefitsMap({ location, initialNeed }: { location?: string; init
       <div className="mt-5 grid gap-5 lg:grid-cols-[0.82fr_1.18fr]">
         <div
           aria-label="ServiceBridge AI idea illustration"
-          className="min-h-[360px] overflow-hidden rounded-[1.5rem] border border-[#244B35]/10 bg-white bg-[url('/images/p.jpg')] bg-contain bg-center bg-no-repeat shadow-inner"
+          className="min-h-[360px] overflow-hidden rounded-[1.5rem] border border-[#244B35]/10 bg-[#244B35] bg-[url('/images/p.jpg')] bg-cover bg-center shadow-inner"
           role="img"
         />
 
