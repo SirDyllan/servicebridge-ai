@@ -64,7 +64,7 @@ function buildReply(retrieval: ChatRetrievalResult, urgentPrefix: string) {
   }
 
   if (retrieval.needsMoreInformation) {
-    return urgentPrefix + buildFollowUpReply(nextQuestion, retrieval.classification.primaryNeeds);
+    return urgentPrefix + buildFollowUpReply(retrieval);
   }
 
   return (
@@ -77,22 +77,36 @@ function buildReply(retrieval: ChatRetrievalResult, urgentPrefix: string) {
 
 function buildClarifyingReply(nextQuestion: string) {
   if (!nextQuestion) {
-    return "I am not fully sure what you need yet. Tell me your situation in one sentence, and I will help narrow the possible pathway.";
+    return "Hello. I can help with benefits navigation, document readiness, and official-office handoff. What support area should we start with?";
   }
 
   if (nextQuestion.toLowerCase().includes("new id")) {
     return `I can help with document readiness. ${nextQuestion}`;
   }
 
+  if (nextQuestion.toLowerCase().includes("driver")) {
+    return `I can help with driver's-license document readiness. ${nextQuestion}`;
+  }
+
   if (nextQuestion.toLowerCase().includes("money")) {
     return `I can help you check possible support pathways, but I need one detail first. ${nextQuestion}`;
   }
 
-  return `I am not fully sure what you need help with yet. ${nextQuestion} You can also type your situation in one sentence, like: I am a student and I need help with food.`;
+  return `Hello. I can help with benefits navigation, document readiness, and safe next steps. ${nextQuestion}`;
 }
 
-function buildFollowUpReply(nextQuestion: string, primaryNeeds: string[]) {
+function buildFollowUpReply(retrieval: ChatRetrievalResult) {
+  const nextQuestion = retrieval.nextQuestion;
+  const primaryNeeds = retrieval.classification.primaryNeeds;
   if (!nextQuestion) return "Thanks, that helps. I need one more detail before giving guidance.";
+
+  const isLicenseRequest = retrieval.classification.documentIssues.some((issue) => {
+    return issue.toLowerCase().includes("license");
+  });
+
+  if (isLicenseRequest) {
+    return `I can help you prepare for a driver's-license or identity-document process. Requirements depend on the official office in your area. ${nextQuestion}`;
+  }
 
   if (nextQuestion.toLowerCase().includes("proof of enrollment")) {
     return `Missing ID can make applications harder, but you can still prepare the student-support route. ${nextQuestion}`;

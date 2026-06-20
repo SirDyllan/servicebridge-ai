@@ -71,6 +71,10 @@ export function retrieveChatServices(
 function normalizeBenefitText(message: string) {
   return message
     .toLowerCase()
+    .replace(/\blisence\b/g, "license")
+    .replace(/\blicence\b/g, "license")
+    .replace(/\bdrivers\s+license\b/g, "driver license")
+    .replace(/\bdriver's\s+license\b/g, "driver license")
     .replace(/\bfoad\b/g, "food")
     .replace(/\bfod\b/g, "food")
     .replace(/\bfoood\b/g, "food")
@@ -109,6 +113,8 @@ function isLowInformationMessage(message: string) {
     "work",
     "support",
     "charger",
+    "license",
+    "licence",
   ];
   const supportSignals = [
     "food",
@@ -123,6 +129,10 @@ function isLowInformationMessage(message: string) {
     "income",
     "id",
     "document",
+    "driver",
+    "license",
+    "licence",
+    "dmv",
     "support",
     "help",
     "health",
@@ -168,6 +178,10 @@ function detectDocumentIssues(message: string) {
   if (mentionsMissingId(normalized)) {
     issues.push("National ID missing");
     issues.push("Birth certificate or alternative identity proof may be needed");
+  }
+
+  if (/\b(driver license|drivers license|license|licence|dmv)\b/i.test(normalized)) {
+    issues.push("Driver's license or identity-document requirements should be checked");
   }
 
   if (normalized.includes("student")) {
@@ -271,6 +285,14 @@ function buildLowInformationQuestions(message: string) {
     ];
   }
 
+  if (/\b(driver|license|licence|dmv)\b/i.test(message)) {
+    return [
+      "Are you applying for a driver's license, replacing one, or checking which documents you need first?",
+      "What city, state, or country are you applying in?",
+      "Do you already have an ID, proof of residence, or any previous license record?",
+    ];
+  }
+
   if (/\b(money|cash)\b/i.test(message)) {
     return [
       "What kind of support is this for: food, school expenses, emergency relief, employment, or family support?",
@@ -323,7 +345,9 @@ function mentionsUrgency(message: string) {
 }
 
 function mentionsIdentityDocument(message: string) {
-  return /\b(id|identity|document|documents|birth certificate)\b/i.test(message);
+  return /\b(id|identity|document|documents|birth certificate|driver license|drivers license|license|licence|dmv)\b/i.test(
+    message,
+  );
 }
 
 function mentionsEnrollmentStatus(message: string) {
@@ -425,9 +449,19 @@ function isDocumentOnlyRequest(message: string, primaryNeed: string) {
 }
 
 function mentionsBenefitPurpose(message: string) {
-  return ["benefit", "support application", "school", "work", "job", "food", "health", "general replacement"].some(
-    (term) => message.includes(term),
-  );
+  return [
+    "benefit",
+    "support application",
+    "school",
+    "work",
+    "job",
+    "food",
+    "health",
+    "general replacement",
+    "driver license",
+    "license",
+    "dmv",
+  ].some((term) => message.includes(term));
 }
 
 function isDocumentDominantRequest(message: string, primaryNeed: string) {

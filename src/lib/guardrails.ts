@@ -49,7 +49,20 @@ const keywordRules = [
   {
     categoryId: "document-readiness",
     urgency: "normal" as const,
-    keywords: ["id", "identity", "birth certificate", "proof of residence", "document", "student letter"],
+    keywords: [
+      "id",
+      "identity",
+      "birth certificate",
+      "proof of residence",
+      "document",
+      "student letter",
+      "driver license",
+      "drivers license",
+      "driver's license",
+      "licence",
+      "license",
+      "dmv",
+    ],
   },
   {
     categoryId: "healthcare-access",
