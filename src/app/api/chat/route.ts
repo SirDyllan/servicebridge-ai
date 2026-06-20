@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServiceRecords } from "@/lib/firebase-rest";
 import { buildGroundedFallbackResponse } from "@/lib/groundedFallback";
+import { buildIdentityOfficeSearchQuery, getIdentityOfficeRouting } from "@/lib/officeRouting";
 import { generateOpenAiChatResponse } from "@/lib/openai";
 import { assessSafety } from "@/lib/safety";
 import { retrieveChatServices } from "@/lib/serviceRetrieval";
@@ -310,14 +311,17 @@ function getActionIntent(message: string, contextText: string) {
 }
 
 function buildActionResponse(intent: string, fallback: ChatResponse, contextText: string): ChatResponse {
+  const officeContext = buildOfficeContext(contextText, fallback);
+  const identityOffice = getIdentityOfficeRouting(officeContext);
+
   if (intent === "map") {
     const location = extractLocation(contextText) || "your area";
-    const query = `${location} ID office DMV`;
+    const query = buildIdentityOfficeSearchQuery(location, officeContext);
     const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
 
     return {
       ...fallback,
-      reply: `For a lost or misplaced ID, start with the nearest official ID/DMV office for ${location}. Use this Google Maps search link as a starting point: ${mapsUrl}. Please verify the office website, opening hours, fees, and appointment rules before travelling.`,
+      reply: `For an ID or identity-document issue, start with the nearest ${identityOffice.officeType} for ${location}. Use this Google Maps search link as a starting point: ${mapsUrl}. Please verify the official website, opening hours, fees, and appointment rules before travelling.`,
       intakeStatus: "ready_for_guidance",
       nextQuestion: "",
       followUpQuestions: [],
@@ -332,8 +336,8 @@ function buildActionResponse(intent: string, fallback: ChatResponse, contextText
     : "birth certificate or accepted identity proof, proof of residence if available, and any old ID copy or reference number you still have";
   const baseReply =
     intent === "documents"
-      ? `For this situation, prepare these documents: ${documentText}. Since this is an ID replacement issue, ask the official ID/DMV office which identity alternatives they accept.`
-      : `Here is a practical checklist: gather ${documentText}; confirm whether the lost ID needs a police report only if it was stolen; find the nearest official ID/DMV office; verify appointment, fee, and form requirements before travelling.`;
+      ? `For this situation, prepare these documents: ${documentText}. Since this is an ID or identity-document issue, ask the ${identityOffice.officeType} which identity alternatives they accept.`
+      : `Here is a practical checklist: gather ${documentText}; confirm whether the lost ID needs a police report only if it was stolen; find the nearest ${identityOffice.officeType}; verify appointment, fee, and form requirements before travelling.`;
 
   return {
     ...fallback,
@@ -347,6 +351,21 @@ function buildActionResponse(intent: string, fallback: ChatResponse, contextText
       missing,
     },
   };
+}
+
+function buildOfficeContext(contextText: string, fallback: ChatResponse) {
+  return [
+    contextText,
+    ...fallback.matches.map((match) => {
+      return [
+        match.serviceName,
+        match.category,
+        match.sourceLabel,
+        match.documentsNeeded.join(" "),
+        match.nextSteps.join(" "),
+      ].join(" ");
+    }),
+  ].join("\n");
 }
 
 function filterDocumentItems(items: string[]) {

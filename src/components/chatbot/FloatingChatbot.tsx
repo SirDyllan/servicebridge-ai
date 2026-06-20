@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { Bot, FileText, Loader2, MapPin, MessageCircle, Send, ShieldCheck, X } from "lucide-react";
+import { buildIdentityOfficeSearchQuery } from "@/lib/officeRouting";
 import type { ChatMessage, ChatResponse } from "@/types/chat";
 
 type UiMessage = ChatMessage & {
@@ -579,6 +580,14 @@ function buildHandoffUrl(mode: "map" | "human", response: ChatResponse | undefin
 function buildGoogleMapsUrl(response: ChatResponse, messages: UiMessage[]) {
   const location = extractLocationFromMessages(messages);
   const match = response.matches[0];
+  const context = buildOfficeSearchContext(response, messages);
+
+  if (isIdentityOfficeResponse(response)) {
+    const query = buildIdentityOfficeSearchQuery(location || "near me", context);
+
+    return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
+  }
+
   const queryParts = [
     match?.category || response.classification.primaryNeeds[0] || "support office",
     "office",
@@ -587,6 +596,30 @@ function buildGoogleMapsUrl(response: ChatResponse, messages: UiMessage[]) {
   const query = queryParts.filter(Boolean).join(" ");
 
   return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
+}
+
+function isIdentityOfficeResponse(response: ChatResponse) {
+  const text = [
+    ...response.classification.primaryNeeds,
+    ...response.classification.documentIssues,
+    ...response.matches.map((match) => `${match.serviceName} ${match.category} ${match.sourceLabel}`),
+  ]
+    .join(" ")
+    .toLowerCase();
+
+  return /\b(id|identity|document|driver|license|licence|dmv|civil registry|national registry)\b/.test(text);
+}
+
+function buildOfficeSearchContext(response: ChatResponse, messages: UiMessage[]) {
+  const userText = messages
+    .filter((message) => message.role === "user")
+    .map((message) => message.content)
+    .join(" ");
+  const matchText = response.matches
+    .map((match) => `${match.serviceName} ${match.category} ${match.sourceLabel} ${match.documentsNeeded.join(" ")}`)
+    .join(" ");
+
+  return `${userText} ${matchText}`;
 }
 
 function extractLocationFromMessages(messages: UiMessage[]) {
@@ -602,6 +635,10 @@ function extractLocationFromMessages(messages: UiMessage[]) {
     { terms: ["bulawayo"], label: "Bulawayo, Zimbabwe" },
     { terms: ["gweru"], label: "Gweru, Zimbabwe" },
     { terms: ["masvingo"], label: "Masvingo, Zimbabwe" },
+    { terms: ["texas city"], label: "Texas City, USA" },
+    { terms: ["houston"], label: "Houston, USA" },
+    { terms: ["dallas"], label: "Dallas, USA" },
+    { terms: ["austin"], label: "Austin, USA" },
     { terms: ["johannesburg"], label: "Johannesburg, South Africa" },
     { terms: ["pretoria"], label: "Pretoria, South Africa" },
     { terms: ["cape town"], label: "Cape Town, South Africa" },
@@ -611,6 +648,7 @@ function extractLocationFromMessages(messages: UiMessage[]) {
   const known = knownLocations.find((location) => location.terms.some((term) => text.includes(term)));
   if (known) return known.label;
   if (text.includes("zimbabwe")) return "Zimbabwe";
+  if (/\b(usa|u\.s\.a|united states|america)\b/.test(text)) return "USA";
 
   const match = text.match(/\b(?:in|near|around)\s+([a-z][a-z\s-]{2,40})(?:[,.]|$)/i);
   if (!match?.[1]) return "";
