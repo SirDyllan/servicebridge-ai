@@ -20,16 +20,19 @@ export function retrieveChatServices(
   safety: SafetyAssessment,
 ): ChatRetrievalResult {
   const normalizedMessage = normalizeBenefitText(message);
-  const lowInformation = isLowInformationMessage(normalizedMessage);
+  const currentMessage = extractCurrentUserMessage(normalizedMessage);
+  const lowInformation = isLowInformationMessage(currentMessage);
   const retrieval = retrieveServices(normalizedMessage, records);
   const documentOnly = isDocumentOnlyRequest(normalizedMessage, retrieval.categoryName);
   const documentDominant = isDocumentDominantRequest(normalizedMessage, retrieval.categoryName);
   const documentIssues = detectDocumentIssues(normalizedMessage);
+  const canGiveStarterGuidance = !lowInformation && hasEnoughForStarterGuidance(normalizedMessage, retrieval.categoryName);
   const followUpQuestions = buildFollowUpQuestions(
     normalizedMessage,
     retrieval.categoryName,
     lowInformation,
     documentDominant,
+    canGiveStarterGuidance,
   );
   const primaryNeeds = lowInformation ? ["Need not clear yet"] : [retrieval.categoryName];
   const selectedRecords = lowInformation
@@ -62,10 +65,15 @@ export function retrieveChatServices(
       ? "The user message is too short or vague to safely narrow benefit pathways."
       : retrieval.directoryNote,
     safetyNote: retrieval.safetyNote,
-    needsMoreInformation: lowInformation || followUpQuestions.length > 0,
+    needsMoreInformation: lowInformation,
     nextQuestion,
     followUpQuestions,
   };
+}
+
+function extractCurrentUserMessage(message: string) {
+  const match = message.match(/current user message:\s*([^\n]+)/i);
+  return match?.[1]?.trim() || message;
 }
 
 function normalizeBenefitText(message: string) {
@@ -211,11 +219,17 @@ function buildFollowUpQuestions(
   primaryNeed: string,
   lowInformation: boolean,
   documentDominant: boolean,
+  canGiveStarterGuidance: boolean,
 ) {
   const normalized = message.toLowerCase();
 
   if (lowInformation) {
-    return buildLowInformationQuestions(normalized);
+    return buildLowInformationQuestions(normalized).slice(0, 1);
+  }
+
+  if (canGiveStarterGuidance) {
+    const criticalQuestion = getCriticalFollowUpQuestion(normalized, primaryNeed, documentDominant);
+    return criticalQuestion ? [criticalQuestion] : [];
   }
 
   const questions: string[] = [];
@@ -241,7 +255,7 @@ function buildFollowUpQuestions(
       questions.push("Do you need the ID for a benefits application, school, work, or general replacement?");
     }
 
-    return questions.slice(0, 5);
+    return questions.slice(0, 1);
   }
 
   if (primaryNeed === "Healthcare Access" && !mentionsUrgency(normalized)) {
@@ -274,7 +288,40 @@ function buildFollowUpQuestions(
     questions.push("Is this urgent today, this week, or part of a normal application?");
   }
 
-  return questions.slice(0, 5);
+  return questions.slice(0, 1);
+}
+
+function hasEnoughForStarterGuidance(message: string, primaryNeed: string) {
+  if (primaryNeed === "Document Readiness") {
+    return mentionsIdentityDocument(message);
+  }
+
+  const hasNeedSignal =
+    /\b(food|groceries|meal|school|student|fees|job|income|unemployed|health|clinic|child|family|emergency|relief|support)\b/i.test(
+      message,
+    );
+  const hasProfileSignal =
+    /\b(student|lost job|part-time|unemployed|no id|do not have an id|don't have an id|urgent|today|this week|18|age)\b/i.test(
+      message,
+    );
+
+  return hasNeedSignal && hasProfileSignal;
+}
+
+function getCriticalFollowUpQuestion(message: string, primaryNeed: string, documentDominant: boolean) {
+  if (!mentionsLocation(message)) {
+    if (primaryNeed === "Document Readiness" && documentDominant) {
+      return "What city, state, or country should I use to narrow the official office options?";
+    }
+
+    return "What city or campus should I use to narrow the office and support options?";
+  }
+
+  if (primaryNeed === "Document Readiness" && documentDominant && !mentionsBirthCertificate(message)) {
+    return "Do you have a birth certificate, old ID copy, or any other identity proof?";
+  }
+
+  return "";
 }
 
 function buildLowInformationQuestions(message: string) {

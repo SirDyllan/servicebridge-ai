@@ -67,12 +67,37 @@ function buildReply(retrieval: ChatRetrievalResult, urgentPrefix: string) {
     return urgentPrefix + buildFollowUpReply(retrieval);
   }
 
-  return (
+  const starter =
     urgentPrefix +
     "Thanks for explaining your situation. Based on what you shared, this may connect to possible support pathways for " +
     retrieval.classification.primaryNeeds.join(", ") +
-    ". I can help organize documents and next steps, but final eligibility must still be verified with a human adviser or official office."
-  );
+    buildSecondaryNeedText(retrieval) +
+    ". I can help organize documents and next steps, but final eligibility must still be verified with a human adviser or official office.";
+
+  if (nextQuestion) {
+    return `${starter} ${buildBridgeToQuestion(retrieval)} ${nextQuestion}`;
+  }
+
+  return starter;
+}
+
+function buildSecondaryNeedText(retrieval: ChatRetrievalResult) {
+  const needs = retrieval.classification.secondaryNeeds.filter((need) => {
+    return !retrieval.classification.primaryNeeds.includes(need);
+  });
+
+  if (!needs.length) return "";
+  return `, with related support areas like ${needs.slice(0, 3).join(", ")}`;
+}
+
+function buildBridgeToQuestion(retrieval: ChatRetrievalResult) {
+  const hasMissingId = retrieval.classification.documentIssues.some((issue) => issue.toLowerCase().includes("id"));
+
+  if (hasMissingId) {
+    return "Since you mentioned an ID issue, document readiness may be an important first step.";
+  }
+
+  return "One useful detail will help narrow the safest next step:";
 }
 
 function buildClarifyingReply(nextQuestion: string) {
