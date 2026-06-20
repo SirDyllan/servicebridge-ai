@@ -27,18 +27,18 @@ export function ProgramCards() {
   return (
     <section
       id="programs"
-      className="overflow-hidden bg-[radial-gradient(circle_at_top_left,rgba(18,166,166,0.10),transparent_34%),linear-gradient(180deg,#F6F1E7_0%,#FFFFFF_48%,#F6F1E7_100%)] px-5 py-16 sm:px-8"
+      className="overflow-hidden bg-[#8A9A5B] px-5 py-16 text-white sm:px-8"
     >
       <div className="mx-auto max-w-7xl">
         <div className="grid gap-5 lg:grid-cols-[0.82fr_1.18fr] lg:items-end">
           <div className="sb-fade-up">
-            <p className="text-sm font-black uppercase tracking-[0.2em] text-[#12A6A6]">Learn more</p>
-            <h2 className="mt-3 text-4xl font-black uppercase leading-tight tracking-tight text-[#244B35] sm:text-5xl">
+            <p className="text-sm font-black uppercase tracking-[0.2em] text-white/72">Learn more</p>
+            <h2 className="mt-3 text-4xl font-black uppercase leading-tight tracking-tight text-white sm:text-5xl">
               Program pathways users may need
             </h2>
           </div>
           <div className="sb-fade-up-delay-1">
-            <p className="max-w-3xl text-base font-semibold leading-8 text-[#244B35]/72">
+            <p className="max-w-3xl text-base font-semibold leading-8 text-white/82">
               Swipe through official or source-backed starting points. Each card shows possible fit, documents to
               prepare, and the human/official verification reminder before a user applies.
             </p>
@@ -47,7 +47,7 @@ export function ProgramCards() {
                 type="button"
                 aria-label="Scroll programs left"
                 onClick={() => scrollPrograms("left")}
-                className="sb-button-motion inline-flex size-12 items-center justify-center rounded-full border border-[#244B35]/15 bg-white text-[#244B35] shadow-sm hover:bg-[#F6F1E7]"
+                className="sb-button-motion inline-flex size-12 items-center justify-center rounded-full border border-white/30 bg-white/12 text-white shadow-sm hover:bg-white/20"
               >
                 <ArrowLeft className="size-5" />
               </button>
@@ -55,7 +55,7 @@ export function ProgramCards() {
                 type="button"
                 aria-label="Scroll programs right"
                 onClick={() => scrollPrograms("right")}
-                className="sb-button-motion inline-flex size-12 items-center justify-center rounded-full bg-[#244B35] text-white shadow-sm hover:bg-[#183324]"
+                className="sb-button-motion inline-flex size-12 items-center justify-center rounded-full bg-white text-[#244B35] shadow-sm hover:bg-[#ffffed]"
               >
                 <ArrowRight className="size-5" />
               </button>

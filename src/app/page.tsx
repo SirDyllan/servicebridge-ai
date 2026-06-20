@@ -14,6 +14,7 @@ import {
 import { Hero } from "@/components/Hero";
 import { Navbar } from "@/components/Navbar";
 import { ProgramCards } from "@/components/ProgramCards";
+import { Footer } from "@/components/Footer";
 
 const introCards = [
   {
@@ -240,6 +241,7 @@ export default function Home() {
       </section>
 
       <ProgramCards />
+      <Footer />
     </main>
   );
 }
