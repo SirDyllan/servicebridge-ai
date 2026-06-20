@@ -24,6 +24,11 @@
 .DS_Store
 *.pem
 
+# local-only submission preparation docs
+/submission/
+/submission-docs/
+/submission-pack/
+
 # debug
 npm-debug.log*
 yarn-debug.log*

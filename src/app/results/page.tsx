@@ -4,19 +4,21 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { ArrowLeft, ClipboardList, Loader2, ShieldCheck } from "lucide-react";
 import { FeedbackForm } from "@/components/FeedbackForm";
-import { HumanReferralCard } from "@/components/HumanReferralCard";
+import { HandoffExperience } from "@/components/HandoffExperience";
 import { ResultCard } from "@/components/ResultCard";
-import type { GuidanceResponse } from "@/types/benefits";
+import type { GuidanceResponse, IntakeFormData } from "@/types/benefits";
 
 export default function ResultsPage() {
   const [response, setResponse] = useState<GuidanceResponse | null>(null);
   const [query, setQuery] = useState("");
+  const [handoffLocation, setHandoffLocation] = useState("");
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
       const stored = window.localStorage.getItem("servicebridge:lastGuidance");
       const storedQuery = window.localStorage.getItem("servicebridge:lastQuery") ?? "";
+      const storedIntake = window.localStorage.getItem("servicebridge:lastIntake");
       if (stored) {
         try {
           setResponse(JSON.parse(stored) as GuidanceResponse);
@@ -24,6 +26,7 @@ export default function ResultsPage() {
           setResponse(null);
         }
       }
+      setHandoffLocation(readStoredLocation(storedIntake, storedQuery));
       setQuery(storedQuery);
       setIsReady(true);
     }, 0);
@@ -132,17 +135,13 @@ export default function ResultsPage() {
           <div className="h-px flex-1 bg-[#244B35]/15" />
           <div className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-xs font-black uppercase tracking-[0.12em] text-[#244B35] shadow-sm ring-1 ring-[#244B35]/10">
             <ShieldCheck className="size-4 text-[#12A6A6]" />
-            Next: verify with a human
+            Next: use Search Zone to verify
           </div>
           <div className="h-px flex-1 bg-[#244B35]/15" />
         </div>
 
-        <section aria-label="Verify with a human" className="grid gap-6">
-          <HumanReferralCard
-            referral={guidance.humanReferral}
-            safetyNote={guidance.safetyNote}
-            primaryMatch={guidance.possibleMatches[0]}
-          />
+        <section aria-label="Search Zone handoff" className="grid gap-6">
+          <HandoffExperience need={response.retrieval.categoryName} location={handoffLocation} mode="map" />
           <FeedbackForm
             query={query}
             category={response.retrieval.categoryName}
@@ -153,6 +152,20 @@ export default function ResultsPage() {
       </div>
     </main>
   );
+}
+
+function readStoredLocation(storedIntake: string | null, storedQuery: string) {
+  if (storedIntake) {
+    try {
+      const intake = JSON.parse(storedIntake) as Partial<IntakeFormData>;
+      if (typeof intake.location === "string" && intake.location.trim()) return intake.location.trim();
+    } catch {
+      // Fall back to the query text below.
+    }
+  }
+
+  const match = storedQuery.match(/^Location:\s*(.+)$/im);
+  return match?.[1]?.trim() ?? "";
 }
 
 function InfoBox({ label, value }: { label: string; value: string }) {
