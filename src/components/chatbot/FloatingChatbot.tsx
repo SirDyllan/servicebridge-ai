@@ -157,8 +157,6 @@ export function FloatingChatbot() {
                 key={`${message.role}-${index}`}
                 message={message}
                 messages={messages}
-                onQuickReply={sendMessage}
-                quickRepliesDisabled={isLoading}
               />
             ))}
             {isLoading ? (
@@ -268,13 +266,9 @@ function BotAvatar({
 function ChatBubble({
   message,
   messages,
-  onQuickReply,
-  quickRepliesDisabled,
 }: {
   message: UiMessage;
   messages: UiMessage[];
-  onQuickReply: (message: string) => Promise<void>;
-  quickRepliesDisabled: boolean;
 }) {
   const isUser = message.role === "user";
 
@@ -294,8 +288,6 @@ function ChatBubble({
           <StructuredResponse
             response={message.response}
             messages={messages}
-            onQuickReply={onQuickReply}
-            quickRepliesDisabled={quickRepliesDisabled}
           />
         ) : null}
       </div>
@@ -330,13 +322,9 @@ function MessageText({ text }: { text: string }) {
 function StructuredResponse({
   response,
   messages,
-  onQuickReply,
-  quickRepliesDisabled,
 }: {
   response: ChatResponse;
   messages: UiMessage[];
-  onQuickReply: (message: string) => Promise<void>;
-  quickRepliesDisabled: boolean;
 }) {
   const needIsNotClear = response.classification.primaryNeeds[0] === "Need not clear yet";
   const hasPathwayDetails =
@@ -392,12 +380,6 @@ function StructuredResponse({
       </div>
       ) : null}
 
-      <DocumentQuickChecks
-        response={response}
-        disabled={quickRepliesDisabled}
-        onQuickReply={onQuickReply}
-      />
-
       <div className="rounded-xl bg-amber-50 p-3">
         <div className="mb-2 flex items-center gap-2 text-xs font-black text-amber-950">
           <ShieldCheck className="size-3" />
@@ -426,144 +408,6 @@ function StructuredResponse({
       ) : null}
     </div>
   );
-}
-
-function DocumentQuickChecks({
-  response,
-  disabled,
-  onQuickReply,
-}: {
-  response: ChatResponse;
-  disabled: boolean;
-  onQuickReply: (message: string) => Promise<void>;
-}) {
-  const [selected, setSelected] = useState<Record<string, "have" | "missing">>({});
-  const documentName = getDocumentQuickCheckItems(response)[0];
-
-  if (!documentName) return null;
-
-  function handleSelect(documentName: string, value: "have" | "missing") {
-    const key = normalizeDocumentKey(documentName);
-    setSelected((current) => ({ ...current, [key]: value }));
-
-    void onQuickReply(
-      value === "have"
-        ? `For the document readiness check: I have ${documentName}.`
-        : `For the document readiness check: I do not have ${documentName}.`,
-    );
-  }
-
-  const key = normalizeDocumentKey(documentName);
-  const current = selected[key];
-
-  return (
-    <div className="rounded-xl border border-emerald-900/10 bg-white p-3">
-      <p className="text-[11px] font-black uppercase tracking-[0.12em] text-emerald-800">
-        Quick document check
-      </p>
-      <p className="mt-2 text-sm font-semibold leading-6 text-slate-700">
-        Do you have your <span className="font-black text-slate-950">{documentName}</span>?
-      </p>
-      <div className="mt-3 flex justify-end gap-2">
-        <DocumentQuickOption
-          label="Yes"
-          checked={current === "have"}
-          disabled={disabled}
-          onClick={() => handleSelect(documentName, "have")}
-        />
-        <DocumentQuickOption
-          label="No"
-          checked={current === "missing"}
-          disabled={disabled}
-          onClick={() => handleSelect(documentName, "missing")}
-        />
-      </div>
-    </div>
-  );
-}
-
-function DocumentQuickOption({
-  label,
-  checked,
-  disabled,
-  onClick,
-}: {
-  label: string;
-  checked: boolean;
-  disabled: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      role="radio"
-      aria-checked={checked}
-      disabled={disabled}
-      onClick={onClick}
-      className={`inline-flex min-w-14 items-center justify-center rounded-full px-4 py-2 text-xs font-black transition ${
-        checked
-          ? "bg-emerald-800 text-white"
-          : "bg-white text-slate-700 ring-1 ring-slate-200 hover:bg-emerald-50 hover:text-emerald-900"
-      } ${disabled ? "cursor-not-allowed opacity-60" : ""}`}
-    >
-      {label}
-    </button>
-  );
-}
-
-function getDocumentQuickCheckItems(response: ChatResponse) {
-  const knownMissingKeys = new Set(response.documentChecklist.missing.map((documentName) => {
-    return normalizeDocumentKey(cleanDocumentName(documentName));
-  }));
-  const knownMissingIdentity = response.documentChecklist.missing.some((documentName) => {
-    return /\b(id|identity|national id)\b/i.test(documentName);
-  });
-  const likelyDocuments = [
-    ...response.classification.documentIssues,
-    ...response.documentChecklist.needed,
-    ...response.matches.flatMap((match) => match.documentsNeeded),
-  ];
-
-  const normalized = new Map<string, string>();
-
-  likelyDocuments.forEach((documentName) => {
-    const cleaned = cleanDocumentName(documentName);
-    const key = normalizeDocumentKey(cleaned);
-    const isIdentityCheck = /\b(id|identity)\b/i.test(cleaned);
-    if (!key || normalized.has(key) || knownMissingKeys.has(key) || !isValidDocumentCheck(cleaned)) return;
-    if (knownMissingIdentity && isIdentityCheck) return;
-    normalized.set(key, cleaned);
-  });
-
-  return [...normalized.values()].slice(0, 5);
-}
-
-function isValidDocumentCheck(value: string) {
-  const normalized = value.toLowerCase();
-  return !["current location", "household size if relevant", "contact details", "short explanation of urgent need"].includes(
-    normalized,
-  );
-}
-
-function cleanDocumentName(value: string) {
-  const normalized = value.toLowerCase();
-
-  if (normalized.includes("birth certificate")) return "birth certificate";
-  if (normalized.includes("proof of residence") || normalized.includes("residence")) return "proof of residence";
-  if (normalized.includes("student") || normalized.includes("enrollment")) return "student letter or proof of enrollment";
-  if (normalized.includes("income") || normalized.includes("unemployment")) return "proof of income or unemployment";
-  if (normalized.includes("guardian") || normalized.includes("parent")) return "parent or guardian ID copy";
-  if (normalized.includes("id") || normalized.includes("identity")) return "ID or identity proof";
-
-  return value
-    .replace(/^missing\s+/i, "")
-    .replace(/^unknown\s+/i, "")
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
-function normalizeDocumentKey(value: string) {
-  return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 }
 
 function buildHandoffUrl(mode: "map" | "human", response: ChatResponse | undefined, messages: UiMessage[]) {
