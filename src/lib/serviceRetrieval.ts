@@ -90,12 +90,36 @@ function normalizeBenefitText(message: string) {
 function isLowInformationMessage(message: string) {
   const normalized = message.trim().toLowerCase();
   const words = normalized.split(/\s+/).filter(Boolean);
+  const vagueStandaloneInputs = [
+    "hi",
+    "hello",
+    "hey",
+    "help",
+    "start",
+    "money",
+    "cash",
+    "id",
+    "document",
+    "documents",
+    "school",
+    "food",
+    "health",
+    "healthcare",
+    "job",
+    "work",
+    "support",
+    "charger",
+  ];
   const supportSignals = [
     "food",
+    "money",
+    "cash",
     "school",
     "fees",
     "student",
     "job",
+    "work",
+    "employment",
     "income",
     "id",
     "document",
@@ -107,6 +131,15 @@ function isLowInformationMessage(message: string) {
     "emergency",
     "rent",
     "benefit",
+    "snap",
+    "medicaid",
+    "chip",
+    "tanf",
+    "liheap",
+    "beam",
+    "dmv",
+    "real id",
+    "civil registry",
     "clinic",
     "doctor",
     "medicine",
@@ -116,6 +149,7 @@ function isLowInformationMessage(message: string) {
     "grandparent",
   ];
 
+  if (words.length <= 2 && vagueStandaloneInputs.includes(normalized)) return true;
   if (words.length <= 2 && ["hi", "hello", "hey", "help", "start"].includes(normalized)) return true;
 
   return !supportSignals.some((signal) => normalized.includes(signal));
@@ -166,12 +200,7 @@ function buildFollowUpQuestions(
   const normalized = message.toLowerCase();
 
   if (lowInformation) {
-    return [
-      "What kind of support do you need right now: food, school expenses, documents, healthcare access, childcare, or emergency relief?",
-      "What city, campus, or area are you in?",
-      "Is this urgent today, this week, or a normal application?",
-      "Do you have a national ID or any alternative identity document?",
-    ];
+    return buildLowInformationQuestions(normalized);
   }
 
   const questions: string[] = [];
@@ -231,6 +260,60 @@ function buildFollowUpQuestions(
   }
 
   return questions.slice(0, 5);
+}
+
+function buildLowInformationQuestions(message: string) {
+  if (/\b(id|document|documents)\b/i.test(message)) {
+    return [
+      "Are you applying for a new ID, replacing a lost ID, or checking whether an ID is needed before applying for support?",
+      "What city, campus, or area are you in?",
+      "Do you have a birth certificate, old ID copy, or any other identity proof?",
+    ];
+  }
+
+  if (/\b(money|cash)\b/i.test(message)) {
+    return [
+      "What kind of support is this for: food, school expenses, emergency relief, employment, or family support?",
+      "What city, campus, or area are you in?",
+      "Is this urgent today, this week, or a normal application?",
+    ];
+  }
+
+  if (/\b(food)\b/i.test(message)) {
+    return [
+      "Is the food need urgent today, this week, or part of a normal application?",
+      "What city, campus, or area are you in?",
+      "Are you a student, caregiver, unemployed, or applying for yourself?",
+    ];
+  }
+
+  if (/\b(school)\b/i.test(message)) {
+    return [
+      "Are you looking for school fees, food as a student, proof of enrollment, or another student support issue?",
+      "What city, campus, or area are you in?",
+      "Are you currently enrolled at a school, college, or university?",
+    ];
+  }
+
+  if (/\b(health|healthcare)\b/i.test(message)) {
+    return [
+      "Are you looking for help accessing healthcare support, documents for healthcare, or an urgent medical situation?",
+      "What city, campus, or area are you in?",
+    ];
+  }
+
+  if (/\b(job|work|employment)\b/i.test(message)) {
+    return [
+      "Are you looking for job-readiness support, unemployment support, income-change documents, or another work issue?",
+      "What city, campus, or area are you in?",
+    ];
+  }
+
+  return [
+    "Are you asking about food support, school expenses, ID or documents, healthcare, emergency relief, employment, or finding an office?",
+    "What city, campus, or area are you in?",
+    "Is this urgent today, this week, or part of a normal application?",
+  ];
 }
 
 function mentionsUrgency(message: string) {

@@ -365,7 +365,15 @@ function StructuredResponse({
           <div key={`${match.serviceName}-${match.category}`} className="rounded-xl bg-slate-50 p-3">
             <p className="text-xs font-black text-slate-950">{match.serviceName}</p>
             <p className="mt-1 text-xs font-semibold text-slate-600">{match.whyThisMayFit}</p>
-            <p className="mt-2 text-[11px] font-black text-emerald-800">{match.matchLevel} possible match</p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              <p className="rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-black text-emerald-800">
+                {match.matchLevel} possible match
+              </p>
+              <p className="rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-black text-amber-900">
+                Verify first
+              </p>
+            </div>
+            <p className="mt-2 text-[11px] font-semibold leading-5 text-slate-500">{match.sourceLabel}</p>
           </div>
         ))
       ) : null}
@@ -385,6 +393,11 @@ function StructuredResponse({
             Missing or unknown: {response.documentChecklist.missing.join(", ")}
           </p>
         ) : null}
+        {response.documentChecklist.notes[0] ? (
+          <p className="mt-2 text-[11px] font-semibold leading-5 text-emerald-900">
+            {response.documentChecklist.notes[0]}
+          </p>
+        ) : null}
       </div>
 
       <DocumentQuickChecks
@@ -396,7 +409,7 @@ function StructuredResponse({
       <div className="rounded-xl bg-amber-50 p-3">
         <div className="mb-2 flex items-center gap-2 text-xs font-black text-amber-950">
           <ShieldCheck className="size-3" />
-          Human referral
+          Verify with a human
         </div>
         <p className="text-xs font-semibold leading-5 text-amber-950">
           {response.humanReferral.suggestedContactType}

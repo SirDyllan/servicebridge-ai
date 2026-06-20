@@ -10,7 +10,17 @@ export const chatActions = [
   "Rate this guidance",
 ];
 
-export const chatDisclaimer = "This is guidance only and not a final eligibility decision.";
+export const clarifyingActions = [
+  "Food support",
+  "Education support",
+  "ID or documents",
+  "Healthcare access",
+  "Emergency relief",
+  "Employment support",
+];
+
+export const chatDisclaimer =
+  "Guidance only - not approval. Verify final eligibility and requirements with an official office or human advisor.";
 
 export function buildGroundedFallbackResponse(
   message: string,
@@ -20,6 +30,7 @@ export function buildGroundedFallbackResponse(
   const documentChecklist = buildDocumentChecklist(message, retrieval);
   const urgentPrefix = safety.shouldLimitAdvice ? `${safety.safetyMessage} ` : "";
   const intakeStatus = retrieval.needsMoreInformation ? "needs_follow_up" : "ready_for_guidance";
+  const needsClarification = retrieval.classification.primaryNeeds[0] === "Need not clear yet";
   const reply = buildReply(retrieval, urgentPrefix);
 
   return {
@@ -40,7 +51,7 @@ export function buildGroundedFallbackResponse(
         ? "Trusted human, emergency service, student affairs office, social worker, or verified support organization"
         : "Student affairs office, social worker, public support office, or verified community support organization",
     },
-    actions: chatActions,
+    actions: needsClarification ? clarifyingActions : chatActions,
     disclaimer: chatDisclaimer,
   };
 }
@@ -49,10 +60,7 @@ function buildReply(retrieval: ChatRetrievalResult, urgentPrefix: string) {
   const nextQuestion = retrieval.nextQuestion;
 
   if (retrieval.classification.primaryNeeds[0] === "Need not clear yet") {
-    return (
-      urgentPrefix +
-      `Hi, I can help with that. To point you toward the right benefits pathway, tell me this first: ${nextQuestion}`
-    );
+    return urgentPrefix + buildClarifyingReply(nextQuestion);
   }
 
   if (retrieval.needsMoreInformation) {
@@ -61,10 +69,26 @@ function buildReply(retrieval: ChatRetrievalResult, urgentPrefix: string) {
 
   return (
     urgentPrefix +
-    "Based on the information you shared, you may match benefit-support pathways connected to " +
+    "Thanks for explaining your situation. Based on what you shared, this may connect to possible support pathways for " +
     retrieval.classification.primaryNeeds.join(", ") +
-    ". This is not approval. Use the checklist to prepare, then verify requirements with a human adviser or official office."
+    ". I can help organize documents and next steps, but final eligibility must still be verified with a human adviser or official office."
   );
+}
+
+function buildClarifyingReply(nextQuestion: string) {
+  if (!nextQuestion) {
+    return "I am not fully sure what you need yet. Tell me your situation in one sentence, and I will help narrow the possible pathway.";
+  }
+
+  if (nextQuestion.toLowerCase().includes("new id")) {
+    return `I can help with document readiness. ${nextQuestion}`;
+  }
+
+  if (nextQuestion.toLowerCase().includes("money")) {
+    return `I can help you check possible support pathways, but I need one detail first. ${nextQuestion}`;
+  }
+
+  return `I am not fully sure what you need help with yet. ${nextQuestion} You can also type your situation in one sentence, like: I am a student and I need help with food.`;
 }
 
 function buildFollowUpReply(nextQuestion: string, primaryNeeds: string[]) {

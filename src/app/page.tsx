@@ -15,6 +15,7 @@ import { Hero } from "@/components/Hero";
 import { Navbar } from "@/components/Navbar";
 import { ProgramCards } from "@/components/ProgramCards";
 import { Footer } from "@/components/Footer";
+import { ResponsibleAiStatement } from "@/components/ResponsibleAiStatement";
 
 const introCards = [
   {
@@ -241,6 +242,7 @@ export default function Home() {
       </section>
 
       <ProgramCards />
+      <ResponsibleAiStatement />
       <Footer />
     </main>
   );
