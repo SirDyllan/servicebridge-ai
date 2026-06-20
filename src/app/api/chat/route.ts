@@ -26,16 +26,16 @@ export async function POST(request: Request) {
   const safety = assessSafety(contextText);
   const retrieval = retrieveChatServices(contextText, directory.records, safety);
   const fallback = buildGroundedFallbackResponse(contextText, retrieval, safety);
-  const actionIntent = getActionIntent(message);
+  const actionIntent = getActionIntent(message, contextText);
 
   if (actionIntent) {
     return NextResponse.json({
-      ...buildActionResponse(actionIntent, fallback),
+      ...buildActionResponse(actionIntent, fallback, contextText),
       directorySource: directory.source,
     });
   }
 
-  if (!process.env.OPENAI_API_KEY || safety.urgency === "emergency") {
+  if (!process.env.OPENAI_API_KEY || safety.category === "self-harm" || safety.category === "medical") {
     return NextResponse.json({
       ...fallback,
       mode: "fallback",
@@ -100,6 +100,28 @@ function inferFactsFromRecentAnswer(message: string, history: ChatMessage[]) {
 
     const assistantText = previous.content.toLowerCase();
     const userText = current.content.toLowerCase();
+    const userLocation = extractLocation(userText);
+    const isAffirmative =
+      /\b(ok|okay|yes|yeah|yep|sure|i have|have it|got it|i do|all documents|all the documents|all the documnts|everything)\b/.test(
+        userText,
+      );
+
+    if (userLocation) {
+      facts.push(`User location is ${userLocation}.`);
+    }
+
+    if (/\b(lost|misplaced|replacement|new id|apply.*id|id.*apply|lost my id)\b/.test(userText)) {
+      facts.push("User is asking about replacing a lost or misplaced ID, not income-based benefits.");
+    }
+
+    if (/\b(misplaced|lost without theft|not stolen|lost or misplaced)\b/.test(userText)) {
+      facts.push("User says the ID was misplaced without theft.");
+    }
+
+    if (/\b(all documents|all the documents|all the documnts|everything)\b/.test(userText)) {
+      facts.push("User has identity proof such as a birth certificate, old ID copy, or another identity proof.");
+      facts.push("User has proof of residence.");
+    }
 
     if (
       assistantText.includes("proof of enrollment") &&
@@ -107,29 +129,81 @@ function inferFactsFromRecentAnswer(message: string, history: ChatMessage[]) {
     ) {
       facts.push("User can get proof of enrollment such as a student letter or registration record.");
     }
+
+    if (
+      isAffirmative &&
+      (assistantText.includes("birth certificate") ||
+        assistantText.includes("old id copy") ||
+        assistantText.includes("identity proof"))
+    ) {
+      facts.push("User has identity proof such as a birth certificate, old ID copy, or another identity proof.");
+    }
+
+    if (isAffirmative && assistantText.includes("proof of residence")) {
+      facts.push("User has proof of residence.");
+    }
+
+    if (
+      isAffirmative &&
+      (assistantText.includes("stolen") || assistantText.includes("lost or misplaced without theft"))
+    ) {
+      facts.push("User has answered the theft question about the lost ID.");
+    }
   }
 
   return Array.from(new Set(facts));
 }
 
-function getActionIntent(message: string) {
+function extractLocation(text: string) {
+  const normalized = text.replace(/\btexa city\b/g, "texas city");
+  const match = normalized.match(/\b(?:in|near|around|at)\s+([a-z][a-z\s-]{2,40})\b/);
+  if (!match) return "";
+
+  return match[1]
+    .replace(/\b(i|and|but|with|have|need|want)\b.*$/i, "")
+    .trim()
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function getActionIntent(message: string, contextText: string) {
   const normalized = message.toLowerCase();
+  const normalizedContext = contextText.toLowerCase();
   if (normalized.includes("show required documents")) return "documents";
   if (normalized.includes("create checklist")) return "checklist";
+  if (
+    /\b(where to go|location link|location links|map|nearby|nearest|office)\b/.test(normalized) &&
+    /\b(id|identity|lost|misplaced|dmv|document)\b/.test(normalizedContext)
+  ) {
+    return "map";
+  }
   return "";
 }
 
-function buildActionResponse(intent: string, fallback: ChatResponse): ChatResponse {
+function buildActionResponse(intent: string, fallback: ChatResponse, contextText: string): ChatResponse {
+  if (intent === "map") {
+    const location = extractLocation(contextText) || "your area";
+    const query = `${location} ID office DMV`;
+    const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
+
+    return {
+      ...fallback,
+      reply: `For a lost or misplaced ID, start with the nearest official ID/DMV office for ${location}. Use this Google Maps search link as a starting point: ${mapsUrl}. Please verify the office website, opening hours, fees, and appointment rules before travelling.`,
+      intakeStatus: "ready_for_guidance",
+      nextQuestion: "",
+      followUpQuestions: [],
+    };
+  }
+
   const needed = filterDocumentItems(fallback.documentChecklist.needed);
   const missing = filterDocumentItems(fallback.documentChecklist.missing);
   const documents = canonicalDocuments([...needed, ...missing]);
   const documentText = documents.length
     ? documents.join(", ")
-    : "proof of enrollment, proof of residence if available, income-change proof, and any identity alternative you have";
+    : "birth certificate or accepted identity proof, proof of residence if available, and any old ID copy or reference number you still have";
   const baseReply =
     intent === "documents"
-      ? `For this situation, prepare these documents: ${documentText}. Since you said you do not have an ID yet, ask the student affairs office or support office which identity alternative they can accept while you work on ID replacement.`
-      : `Here is a practical checklist: gather ${documentText}; write a short note explaining that you lost part-time income; contact student affairs or a social worker in your area this week; ask which support can start before your ID is ready.`;
+      ? `For this situation, prepare these documents: ${documentText}. Since this is an ID replacement issue, ask the official ID/DMV office which identity alternatives they accept.`
+      : `Here is a practical checklist: gather ${documentText}; confirm whether the lost ID needs a police report only if it was stolen; find the nearest official ID/DMV office; verify appointment, fee, and form requirements before travelling.`;
 
   return {
     ...fallback,

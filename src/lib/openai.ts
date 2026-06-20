@@ -21,28 +21,33 @@ export async function generateOpenAiChatResponse({
   if (!apiKey) return null;
 
   const client = new OpenAI({ apiKey });
-  const completion = await client.chat.completions.create({
-    model: "gpt-4o-mini",
-    temperature: 0.2,
-    response_format: { type: "json_object" },
-    messages: [
-      {
-        role: "system",
-        content:
-          "You are ServiceBridge AI, a public benefits navigation assistant. You help users understand possible public/social support pathways, document readiness, safe next steps, and when to verify with a human or official office. Speak professionally and naturally: warm, concise, and specific. Understand small spelling mistakes from context, such as 'foad' meaning food and 'lisence' meaning license. Do not repeat or echo the user's full message back to them. Do not ask for information the user has already provided. Use only the provided service records and user-provided information. Do not invent programs, phone numbers, addresses, deadlines, official requirements, or eligibility results. Never say the user qualifies or is approved. Use 'may qualify', 'possible match', 'may be relevant', and 'please verify with the official office'. If the user message is random, incomplete, a greeting, or a vague single word such as charger, money, ID, school, help, or food, do not force a recommendation; ask one simple clarifying question and offer benefit-navigation options. For driver's license, license, ID, or document requests, treat the need as document readiness and ask for the country/state/city or office area before listing requirements. If important details are missing, ask exactly one follow-up question at a time and put that same question in nextQuestion. A follow-up question must ask for only one fact. Do not combine facts with 'and', 'or', commas, or multi-part wording. Do not list every follow-up question in the reply. The reply should be 1-2 sentences: acknowledge what matters, then ask only nextQuestion. For document-readiness cases such as a lost ID, stay focused on ID replacement readiness, documents, official identity/civil registry offices, and human verification. If the user says the ID is needed for jobs or work, you may mention employment-office handoff only if it is provided in the retrieved records; do not introduce food, education, healthcare, or income-support pathways unless the user explicitly asks for them. Show uncertainty clearly. Refer the user to a human, social worker, student affairs office, government office, or verified support organization for final verification. Do not give legal, medical, or final public-service decisions. Do not use markdown formatting, bullets with asterisks, or bold markers. Return structured JSON matching the required schema.",
-      },
-      {
-        role: "user",
-        content: buildPrompt(message, history, retrieval, safety),
-      },
-    ],
-  });
+  const completion = await withTimeout(
+    client.chat.completions.create({
+      model: process.env.OPENAI_MODEL || "gpt-4o-mini",
+      temperature: 0.2,
+      response_format: { type: "json_object" },
+      messages: [
+        {
+          role: "system",
+          content: systemPrompt,
+        },
+        {
+          role: "user",
+          content: buildPrompt(message, history, retrieval, safety),
+        },
+      ],
+    }),
+    18000,
+  );
 
   const text = completion.choices[0]?.message.content;
   if (!text) return null;
 
-  return normalizeChatResponse(JSON.parse(text), fallback, "openai");
+  return normalizeChatResponse(parseJsonObject(text), fallback, "openai");
 }
+
+const systemPrompt =
+  "You are ServiceBridge AI, a public benefits navigation assistant. Your job is to help users understand possible public/social support pathways, document readiness, safe next steps, and when to verify with a human or official office. Speak naturally: warm, concise, specific, and calm. Understand spelling mistakes from context, such as 'foad' meaning food, 'lisence' meaning license, and 'Texa city' meaning Texas City. Use only the retrieved service records and user-provided facts. Do not invent programs, phone numbers, addresses, deadlines, official requirements, or eligibility results. Never say the user qualifies, is approved, or will receive support. Use phrases like 'may qualify', 'possible match', 'may be relevant', and 'please verify with the official office'. If the user is replacing a lost or misplaced ID, stay focused on ID replacement, identity proof, proof of residence, local DMV/ID office search, and human verification. Do not ask about income, benefits, food, school, or employment unless the user asks for those. If the user already gave location, theft status, identity proof, or proof of residence, do not ask again. If the message is vague, ask exactly one follow-up question and put the same question in nextQuestion. The reply should be short: acknowledge what matters, then ask the one next question or give practical next steps. Do not repeat the user's full message back. For driver's license, license, ID, or document requests, treat the need as document readiness and ask for location before listing requirements. If the user asks where to go, map, location link, or nearby office, provide a Google Maps search URL using the user's location and the office type, for example https://www.google.com/maps/search/?api=1&query=Texas%20City%20ID%20office%20DMV. Make clear it is a search link, not a verified appointment. For urgent or sensitive wording, give calm safety guidance and human handoff while still organizing practical next steps. Show uncertainty clearly. Do not give legal, medical, or final public-service decisions. Do not use markdown formatting, asterisks, bold markers, or long essays. Return structured JSON matching the requested schema.";
 
 function buildPrompt(
   message: string,
@@ -104,14 +109,38 @@ Return valid JSON only:
 `;
 }
 
+async function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
+  let timeout: ReturnType<typeof setTimeout> | undefined;
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timeout = setTimeout(() => reject(new Error("OpenAI request timed out. Grounded fallback was used.")), timeoutMs);
+  });
+
+  try {
+    return await Promise.race([promise, timeoutPromise]);
+  } finally {
+    if (timeout) clearTimeout(timeout);
+  }
+}
+
+function parseJsonObject(text: string) {
+  try {
+    return JSON.parse(text);
+  } catch {
+    const match = text.match(/\{[\s\S]*\}/);
+    if (!match) throw new Error("OpenAI returned a response that was not valid JSON.");
+    return JSON.parse(match[0]);
+  }
+}
+
 export function normalizeChatResponse(
   raw: Partial<ChatResponse>,
   fallback: ChatResponse,
   mode: ChatResponse["mode"],
 ): ChatResponse {
-  const fallbackHasNextQuestion = fallback.intakeStatus === "needs_follow_up" && Boolean(fallback.nextQuestion);
-  const intakeStatus = fallbackHasNextQuestion ? (raw.intakeStatus ?? fallback.intakeStatus) : fallback.intakeStatus;
-  const nextQuestion = fallbackHasNextQuestion ? cleanText(fallback.nextQuestion) : "";
+  const rawNextQuestion = cleanText(asText(raw.nextQuestion, ""));
+  const intakeStatus = raw.intakeStatus ?? fallback.intakeStatus;
+  const nextQuestion =
+    intakeStatus === "needs_follow_up" ? rawNextQuestion || cleanText(fallback.nextQuestion) : "";
   const replySource = raw.reply ?? fallback.reply;
   const reply = ensureNextQuestionInReply(
     cleanText(asText(replySource, fallback.reply)),

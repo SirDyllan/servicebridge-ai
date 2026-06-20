@@ -88,7 +88,8 @@ function normalizeBenefitText(message: string) {
     .replace(/\bidenty\b/g, "identity")
     .replace(/\bunemployeed\b/g, "unemployed")
     .replace(/\bscholl\b/g, "school")
-    .replace(/\bskool\b/g, "school");
+    .replace(/\bskool\b/g, "school")
+    .replace(/\btexa city\b/g, "texas city");
 }
 
 function isLowInformationMessage(message: string) {
@@ -363,15 +364,21 @@ function mentionsProofOfEnrollment(message: string) {
 }
 
 function mentionsBirthCertificate(message: string) {
-  return /\b(birth certificate|birth cert|certificate)\b/i.test(message);
+  return /\b(birth certificate|birth cert|certificate|old id copy|identity proof|all documents|all the documents|all the documnts)\b/i.test(
+    message,
+  );
 }
 
 function mentionsProofOfResidence(message: string) {
-  return /\b(proof\s+(of|or)\s+residence|residence proof|proof of address|utility bill|lease|address)\b/i.test(message);
+  return /\b(proof\s+(of|or)\s+residence|residence proof|proof of address|utility bill|lease|address|all documents|all the documents|all the documnts)\b/i.test(
+    message,
+  );
 }
 
 function mentionsLostWithoutTheft(message: string) {
-  return /\b(without theft|not stolen|misplaced|lost or misplaced)\b/i.test(message);
+  return /\b(without theft|not stolen|misplaced|lost or misplaced|misplaced without theft|answered the theft question)\b/i.test(
+    message,
+  );
 }
 
 function mentionsMissingId(message: string) {
@@ -392,6 +399,11 @@ function mentionsLocation(message: string) {
     "pretoria",
     "cape town",
     "durban",
+    "texas",
+    "texas city",
+    "houston",
+    "dallas",
+    "austin",
     "campus",
   ];
 

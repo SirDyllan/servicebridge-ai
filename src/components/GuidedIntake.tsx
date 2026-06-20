@@ -70,6 +70,15 @@ const steps = [
   },
 ];
 
+type IntakeContext = {
+  needsStudent: boolean;
+  needsIncome: boolean;
+  needsUrgency: boolean;
+  needsDependents: boolean;
+  needsStudentLetter: boolean;
+  needsIncomeProof: boolean;
+};
+
 export function GuidedIntake() {
   const router = useRouter();
   const [intake, setIntake] = useState<IntakeFormData>(emptyIntake);
@@ -101,6 +110,7 @@ export function GuidedIntake() {
   const isLastStep = stepIndex === steps.length - 1;
   const progress = ((stepIndex + 1) / steps.length) * 100;
   const hasEnoughToGenerate = Boolean(narrative.trim()) && !isSubmitting;
+  const intakeContext = useMemo(() => inferIntakeContext(intake), [intake]);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -219,8 +229,8 @@ export function GuidedIntake() {
 
       <section className="rounded-[1.5rem] border border-emerald-950/10 bg-white p-5 shadow-[0_14px_44px_rgba(15,23,42,0.05)] sm:p-6">
         {stepIndex === 0 ? <SituationStep intake={intake} updateField={updateField} toggleSupport={toggleSupport} /> : null}
-        {stepIndex === 1 ? <BasicDetailsStep intake={intake} updateField={updateField} /> : null}
-        {stepIndex === 2 ? <DocumentsStep intake={intake} updateField={updateField} /> : null}
+        {stepIndex === 1 ? <BasicDetailsStep intake={intake} context={intakeContext} updateField={updateField} /> : null}
+        {stepIndex === 2 ? <DocumentsStep intake={intake} context={intakeContext} updateField={updateField} /> : null}
         {stepIndex === 3 ? <ReviewStep intake={intake} narrative={narrative} /> : null}
       </section>
 
@@ -307,11 +317,35 @@ function SituationStep({
   );
 }
 
+function inferIntakeContext(intake: IntakeFormData): IntakeContext {
+  const text = `${intake.freeText} ${intake.supportNeeded.join(" ")}`.toLowerCase();
+  const mentions = (terms: string[]) => terms.some((term) => text.includes(term));
+
+  const food = mentions(["food", "meal", "groceries", "snap", "hungry"]);
+  const education = mentions(["education", "school", "student", "fees", "beam", "university", "college"]);
+  const documents = mentions(["id", "document", "license", "licence", "dmv", "birth certificate"]);
+  const healthcare = mentions(["health", "healthcare", "clinic", "doctor", "medicine", "medical"]);
+  const emergency = mentions(["emergency", "urgent", "today", "relief"]);
+  const employment = mentions(["employment", "job", "income", "unemployed", "lost job", "work"]);
+  const family = mentions(["family", "child", "children", "childcare", "dependent", "caregiver", "tanf"]);
+
+  return {
+    needsStudent: education || food,
+    needsIncome: food || emergency || employment || family,
+    needsUrgency: food || emergency || healthcare || documents,
+    needsDependents: family,
+    needsStudentLetter: education || (food && mentions(["student", "school", "college", "university"])),
+    needsIncomeProof: food || emergency || employment || family,
+  };
+}
+
 function BasicDetailsStep({
   intake,
+  context,
   updateField,
 }: {
   intake: IntakeFormData;
+  context: IntakeContext;
   updateField: <Key extends keyof IntakeFormData>(key: Key, value: IntakeFormData[Key]) => void;
 }) {
   return (
@@ -323,6 +357,7 @@ function BasicDetailsStep({
         onChange={(value) => updateField("location", value)}
         placeholder="City, campus, or country"
       />
+      {context.needsStudent ? (
       <SelectField
         label="Student status"
         value={intake.studentStatus}
@@ -333,6 +368,8 @@ function BasicDetailsStep({
           ["not_student", "Not a student"],
         ]}
       />
+      ) : null}
+      {context.needsIncome ? (
       <SelectField
         label="Employment or income status"
         value={intake.employmentStatus}
@@ -345,6 +382,8 @@ function BasicDetailsStep({
           ["employed", "Employed"],
         ]}
       />
+      ) : null}
+      {context.needsUrgency ? (
       <SelectField
         label="Urgency"
         value={intake.urgency}
@@ -356,6 +395,8 @@ function BasicDetailsStep({
           ["normal", "Normal application"],
         ]}
       />
+      ) : null}
+      {context.needsDependents ? (
       <SelectField
         label="Dependents"
         value={intake.dependents}
@@ -366,6 +407,8 @@ function BasicDetailsStep({
           ["yes", "Yes"],
         ]}
       />
+      ) : null}
+      {context.needsIncome ? (
       <label className="block sm:col-span-2">
         <span className="text-sm font-black text-slate-900">Income situation</span>
         <input
@@ -375,15 +418,22 @@ function BasicDetailsStep({
           className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-700 focus:bg-white focus:ring-4 focus:ring-emerald-700/10"
         />
       </label>
+      ) : null}
+      <p className="rounded-2xl bg-emerald-50 p-4 text-xs font-bold leading-5 text-emerald-950 sm:col-span-2">
+        Age and location are asked for every pathway. Other questions only appear when they help narrow the support or
+        document checklist.
+      </p>
     </div>
   );
 }
 
 function DocumentsStep({
   intake,
+  context,
   updateField,
 }: {
   intake: IntakeFormData;
+  context: IntakeContext;
   updateField: <Key extends keyof IntakeFormData>(key: Key, value: IntakeFormData[Key]) => void;
 }) {
   return (
@@ -408,6 +458,7 @@ function DocumentsStep({
           ["no", "No"],
         ]}
       />
+      {context.needsStudentLetter ? (
       <SelectField
         label="Student letter or proof of enrollment"
         value={intake.hasStudentLetter}
@@ -418,6 +469,8 @@ function DocumentsStep({
           ["no", "No"],
         ]}
       />
+      ) : null}
+      {context.needsIncomeProof ? (
       <SelectField
         label="Proof of income or unemployment"
         value={intake.hasProofOfIncome}
@@ -428,6 +481,7 @@ function DocumentsStep({
           ["no", "No"],
         ]}
       />
+      ) : null}
       <div className="rounded-3xl bg-amber-50 p-5 text-sm font-semibold leading-6 text-amber-950 sm:col-span-2">
         Not having a document does not mean the app rejects you. It means the checklist should include what to ask a
         student affairs office, social worker, official office, or verified adviser before applying.

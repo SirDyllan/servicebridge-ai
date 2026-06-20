@@ -25,7 +25,6 @@ export function FloatingChatbot() {
   const [isLoading, setIsLoading] = useState(false);
   const [actionStatus, setActionStatus] = useState("");
   const [hasBotImage, setHasBotImage] = useState(true);
-  const [hasAcknowledgedSafety, setHasAcknowledgedSafety] = useState(false);
   const panelRef = useRef<HTMLDivElement>(null);
 
   const lastResponse = useMemo(() => {
@@ -52,7 +51,7 @@ export function FloatingChatbot() {
 
   async function sendMessage(rawMessage: string) {
     const message = rawMessage.trim();
-    if (!message || isLoading || !hasAcknowledgedSafety) return;
+    if (!message || isLoading) return;
 
     const history: ChatMessage[] = messages.map((item) => ({ role: item.role, content: item.content }));
     setMessages((current) => [...current, { role: "user", content: message }]);
@@ -138,7 +137,7 @@ export function FloatingChatbot() {
               <BotAvatar hasBotImage={hasBotImage} setHasBotImage={setHasBotImage} />
               <div>
                 <p className="text-sm font-black">ServiceBridge AI Assistant</p>
-                <p className="text-xs font-semibold text-emerald-100">Benefits guidance, not final approval.</p>
+                <p className="text-xs font-semibold text-emerald-100">Benefits and document guidance.</p>
               </div>
             </div>
             <button
@@ -152,14 +151,13 @@ export function FloatingChatbot() {
           </header>
 
           <div ref={panelRef} className="flex-1 space-y-4 overflow-y-auto bg-[#f7faf8] p-4">
-            {!hasAcknowledgedSafety ? <ResponsibleAiNotice onAccept={() => setHasAcknowledgedSafety(true)} /> : null}
             {messages.map((message, index) => (
               <ChatBubble
                 key={`${message.role}-${index}`}
                 message={message}
                 messages={messages}
                 onQuickReply={sendMessage}
-                quickRepliesDisabled={isLoading || !hasAcknowledgedSafety}
+                quickRepliesDisabled={isLoading}
               />
             ))}
             {isLoading ? (
@@ -177,7 +175,6 @@ export function FloatingChatbot() {
                 {actionStatus}
               </div>
             ) : null}
-            {hasAcknowledgedSafety ? (
             <div className="mb-3 flex gap-2 overflow-x-auto pb-1">
               {(lastResponse?.actions ?? defaultActions).map((action) => (
                 <button
@@ -190,31 +187,22 @@ export function FloatingChatbot() {
                 </button>
               ))}
             </div>
-            ) : null}
             <form onSubmit={handleSubmit} className="flex gap-2">
               <input
                 value={input}
                 onChange={(event) => setInput(event.target.value)}
-                disabled={!hasAcknowledgedSafety}
-                placeholder={
-                  hasAcknowledgedSafety
-                    ? "Ask about food, school support, ID, documents..."
-                    : "Accept guidance notice to start..."
-                }
+                placeholder="Ask about food, school support, ID, documents..."
                 className="min-w-0 flex-1 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-700 focus:bg-white focus:ring-4 focus:ring-emerald-700/10"
               />
               <button
                 type="submit"
-                disabled={isLoading || !input.trim() || !hasAcknowledgedSafety}
+                disabled={isLoading || !input.trim()}
                 aria-label="Send message"
                 className="flex size-12 items-center justify-center rounded-2xl bg-emerald-800 text-white transition hover:bg-emerald-900 disabled:cursor-not-allowed disabled:bg-slate-400"
               >
                 {isLoading ? <Loader2 className="size-4 animate-spin" /> : <Send className="size-4" />}
               </button>
             </form>
-            <p className="mt-2 text-[11px] font-semibold leading-4 text-slate-500">
-              Guidance only. Please verify with an official office or human advisor.
-            </p>
           </div>
         </div>
       ) : null}
@@ -247,28 +235,6 @@ export function FloatingChatbot() {
           </button>
         </div>
       </div>
-    </div>
-  );
-}
-
-function ResponsibleAiNotice({ onAccept }: { onAccept: () => void }) {
-  return (
-    <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-amber-950">
-      <div className="mb-2 flex items-center gap-2">
-        <ShieldCheck className="size-4" />
-        <p className="text-sm font-black">Before we start</p>
-      </div>
-      <p className="text-xs font-semibold leading-5">
-        ServiceBridge AI gives preparation guidance only. It does not approve benefits, replace emergency help, or make
-        legal, medical, or official decisions. Please verify final requirements with an official office or human advisor.
-      </p>
-      <button
-        type="button"
-        onClick={onAccept}
-        className="mt-3 rounded-xl bg-emerald-800 px-4 py-2 text-xs font-black text-white transition hover:bg-emerald-900"
-      >
-        I understand
-      </button>
     </div>
   );
 }
@@ -322,7 +288,7 @@ function ChatBubble({
               : "border border-emerald-950/10 bg-white text-slate-700"
         }`}
       >
-        <p className="whitespace-pre-wrap font-semibold">{message.content}</p>
+        <MessageText text={message.content} />
         {message.response ? (
           <StructuredResponse
             response={message.response}
@@ -333,6 +299,30 @@ function ChatBubble({
         ) : null}
       </div>
     </div>
+  );
+}
+
+function MessageText({ text }: { text: string }) {
+  const parts = text.split(/(https?:\/\/[^\s]+)/g);
+
+  return (
+    <p className="whitespace-pre-wrap font-semibold">
+      {parts.map((part, index) => {
+        if (!/^https?:\/\//i.test(part)) return <span key={`${part}-${index}`}>{part}</span>;
+
+        return (
+          <a
+            key={`${part}-${index}`}
+            href={part}
+            target="_blank"
+            rel="noreferrer"
+            className="font-black underline decoration-emerald-700 decoration-2 underline-offset-2"
+          >
+            Open link
+          </a>
+        );
+      })}
+    </p>
   );
 }
 
@@ -354,7 +344,6 @@ function StructuredResponse({
     response.documentChecklist.missing.length > 0 ||
     !needIsNotClear;
 
-  if (response.intakeStatus === "needs_follow_up") return null;
   if (needIsNotClear && response.matches.length === 0) return null;
   if (!hasPathwayDetails) return null;
 
@@ -378,10 +367,11 @@ function StructuredResponse({
         ))
       ) : null}
 
+      {response.documentChecklist.needed.length || response.documentChecklist.missing.length || response.documentChecklist.notes[0] ? (
       <div className="rounded-xl bg-emerald-50 p-3">
         <div className="mb-2 flex items-center gap-2 text-xs font-black text-emerald-950">
           <FileText className="size-3" />
-          Documents
+          What to prepare
         </div>
         {response.documentChecklist.needed.length ? (
           <p className="text-xs font-semibold leading-5 text-emerald-950">
@@ -399,6 +389,7 @@ function StructuredResponse({
           </p>
         ) : null}
       </div>
+      ) : null}
 
       <DocumentQuickChecks
         response={response}
@@ -429,7 +420,7 @@ function StructuredResponse({
           className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-800 px-3 py-2 text-xs font-black text-white transition hover:bg-emerald-900"
         >
           <MapPin className="size-3" />
-          View on Google Maps
+          Find nearby office
         </a>
       ) : null}
     </div>
