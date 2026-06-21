@@ -29,11 +29,11 @@ export function BenefitsMap({ location, initialNeed }: { location?: string; init
   const items = useMemo(() => buildLocations(activeFilter), [activeFilter]);
 
   return (
-    <section className="rounded-[2rem] border border-[#244B35]/10 bg-white p-5 shadow-[0_18px_55px_rgba(16,35,25,0.08)] sm:p-7">
+    <section className="rounded-[1.5rem] border border-[#244B35]/10 bg-white p-4 shadow-[0_18px_55px_rgba(16,35,25,0.08)] sm:rounded-[2rem] sm:p-7">
       <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
         <div>
           <p className="text-sm font-black uppercase tracking-[0.2em] text-[#12A6A6]">Verification map</p>
-          <h2 className="mt-2 text-3xl font-black tracking-tight text-[#244B35] sm:text-4xl">
+          <h2 className="mt-2 text-2xl font-black tracking-tight text-[#244B35] sm:text-4xl">
             Find the right office type before travelling
           </h2>
           <p className="mt-3 max-w-3xl text-sm font-semibold leading-7 text-[#244B35]/72">
@@ -67,7 +67,7 @@ export function BenefitsMap({ location, initialNeed }: { location?: string; init
       <div className="mt-5 grid gap-5 lg:grid-cols-[0.82fr_1.18fr]">
         <div
           aria-label="ServiceBridge AI idea illustration"
-          className="min-h-[360px] overflow-hidden rounded-[1.5rem] border border-[#244B35]/10 bg-[#244B35] bg-[url('/images/p.jpg')] bg-cover bg-center shadow-inner"
+          className="min-h-48 overflow-hidden rounded-[1.25rem] border border-[#244B35]/10 bg-[#244B35] bg-[url('/images/p.jpg')] bg-cover bg-center shadow-inner sm:min-h-[260px] sm:rounded-[1.5rem] lg:min-h-[360px]"
           role="img"
         />
 
@@ -97,7 +97,7 @@ export function BenefitsMap({ location, initialNeed }: { location?: string; init
                     href={mapsUrl}
                     target="_blank"
                     rel="noreferrer"
-                    className="sb-button-motion inline-flex w-fit shrink-0 items-center gap-2 rounded-full bg-[#B8793A] px-4 py-3 text-sm font-black text-white hover:bg-[#9f642f]"
+                    className="sb-button-motion inline-flex min-h-11 w-full shrink-0 items-center justify-center gap-2 rounded-full bg-[#B8793A] px-4 py-3 text-sm font-black text-white hover:bg-[#9f642f] sm:w-fit"
                   >
                     Open in Google Maps
                     <ExternalLink className="size-4" />

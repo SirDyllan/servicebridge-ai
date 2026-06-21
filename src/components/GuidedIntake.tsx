@@ -2,7 +2,7 @@
 
 import { FormEvent, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRight, CheckCircle2, ChevronLeft, Loader2, Sparkles } from "lucide-react";
+import { ArrowRight, CheckCircle2, ChevronDown, ChevronLeft, Loader2, Sparkles } from "lucide-react";
 import type { GuidanceResponse, IntakeFormData } from "@/types/benefits";
 
 const emptyIntake: IntakeFormData = {
@@ -28,7 +28,7 @@ const demoIntake: IntakeFormData = {
   incomeSituation: "I lost my part-time job and need help with food and school expenses.",
   dependents: "no",
   location: "Mutare City, Zimbabwe",
-  supportNeeded: ["Food support", "Education support", "ID/documents"],
+  supportNeeded: ["Food", "Education", "ID/documents"],
   urgency: "this_week",
   hasId: "no",
   hasProofOfResidence: "unknown",
@@ -39,16 +39,16 @@ const demoIntake: IntakeFormData = {
 };
 
 const supportOptions = [
-  "Food support",
-  "Education support",
+  "Food",
+  "Education",
   "Student welfare",
   "ID/documents",
   "Healthcare",
-  "Emergency relief",
-  "Employment support",
-  "Family/childcare",
+  "Emergency",
+  "Employment",
+  "Family support",
   "Bills/utilities",
-  "Business/SME",
+  "Youth employment / income support",
   "Human adviser",
 ];
 
@@ -168,66 +168,22 @@ export function GuidedIntake() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="mx-auto grid max-w-5xl gap-5">
-      <section className="rounded-[1.5rem] border border-emerald-950/10 bg-white p-5 shadow-[0_18px_55px_rgba(15,23,42,0.06)] sm:p-6">
-        <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-          <div>
-            <p className="text-sm font-black uppercase tracking-[0.22em] text-emerald-800">{currentStep.eyebrow}</p>
-            <h1 className="mt-2 max-w-3xl text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">
-              {currentStep.title}
-            </h1>
-            <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600">{currentStep.description}</p>
-          </div>
-          <button
-            type="button"
-            onClick={loadDemoScenario}
-            className="inline-flex w-fit items-center gap-2 rounded-2xl border border-emerald-900/15 bg-emerald-50 px-4 py-3 text-sm font-black text-emerald-900 shadow-sm transition hover:-translate-y-0.5 hover:bg-emerald-100"
-          >
-            <Sparkles className="size-4" />
-            Load demo
-          </button>
-        </div>
+    <form onSubmit={handleSubmit} className="mx-auto grid max-w-5xl gap-4 pb-28 md:gap-5 md:pb-0">
+      <MobileStepProgress
+        currentStep={currentStep}
+        stepIndex={stepIndex}
+        progress={progress}
+        onLoadDemo={loadDemoScenario}
+      />
+      <DesktopStepProgress
+        currentStep={currentStep}
+        stepIndex={stepIndex}
+        progress={progress}
+        onLoadDemo={loadDemoScenario}
+        onStepChange={setStepIndex}
+      />
 
-        <div className="mt-6">
-          <div className="mb-2 flex items-center justify-between text-xs font-black uppercase tracking-[0.14em] text-emerald-900">
-            <span>Progress</span>
-            <span>{Math.round(progress)}%</span>
-          </div>
-          <div className="h-2 overflow-hidden rounded-full bg-emerald-900/10">
-            <div
-              className="h-full rounded-full bg-emerald-800 transition-[width] duration-300 ease-out"
-              style={{ width: `${progress}%` }}
-            />
-          </div>
-        </div>
-
-        <div className="mt-5 grid gap-2 sm:grid-cols-3">
-          {steps.map((step, index) => {
-            const complete = index < stepIndex;
-            const active = index === stepIndex;
-
-            return (
-              <button
-                key={step.eyebrow}
-                type="button"
-                onClick={() => setStepIndex(index)}
-                className={`flex min-h-12 items-center gap-2 rounded-2xl border px-3 py-2.5 text-left text-xs font-black transition ${
-                  active
-                    ? "border-emerald-800 bg-emerald-800 text-white shadow-lg shadow-emerald-950/10"
-                    : complete
-                      ? "border-emerald-900/10 bg-emerald-50 text-emerald-900 hover:bg-emerald-100"
-                      : "border-slate-200 bg-slate-50 text-slate-500 hover:border-emerald-800/20"
-                }`}
-              >
-                {complete ? <CheckCircle2 className="size-4 shrink-0" /> : <span className="size-2 rounded-full bg-current" />}
-                <span>{step.title}</span>
-              </button>
-            );
-          })}
-        </div>
-      </section>
-
-      <section className="grid gap-5 rounded-[1.5rem] border border-emerald-950/10 bg-white p-5 shadow-[0_14px_44px_rgba(15,23,42,0.05)] sm:p-6 lg:grid-cols-[minmax(0,1fr)_18rem]">
+      <section className="grid gap-4 rounded-[1.35rem] border border-emerald-950/10 bg-white p-4 shadow-[0_14px_44px_rgba(15,23,42,0.05)] sm:p-5 lg:grid-cols-[minmax(0,1fr)_18rem]">
         <div>
           {stepIndex === 0 ? <SituationStep intake={intake} updateField={updateField} toggleSupport={toggleSupport} /> : null}
           {stepIndex === 1 ? <BasicDetailsStep intake={intake} context={intakeContext} updateField={updateField} /> : null}
@@ -242,33 +198,134 @@ export function GuidedIntake() {
         </div>
       ) : null}
 
-      <div className="flex flex-col justify-between gap-3 rounded-[1.5rem] border border-emerald-950/10 bg-[#eaf7ef] p-4 sm:flex-row sm:items-center">
-        <p className="text-sm font-semibold leading-6 text-emerald-950">
-          {isLastStep
-            ? "Generate possible pathways, documents, next steps, and human verification guidance."
-            : "Only the first box is required. Skip anything you are not sure about."}
-        </p>
-        <div className="flex flex-wrap gap-3">
-          <button
-            type="button"
-            disabled={stepIndex === 0 || isSubmitting}
-            onClick={() => setStepIndex((current) => Math.max(current - 1, 0))}
-            className="inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-900/15 bg-white px-5 py-3 text-sm font-black text-emerald-900 transition hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-40"
-          >
-            <ChevronLeft className="size-4" />
-            Back
-          </button>
-          <button
-            type="submit"
-            disabled={isLastStep ? !hasEnoughToGenerate : isSubmitting}
-            className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-800 px-6 py-3 text-sm font-black text-white transition hover:bg-emerald-900 disabled:cursor-not-allowed disabled:bg-slate-400"
-          >
-            {isSubmitting ? <Loader2 className="size-4 animate-spin" /> : <ArrowRight className="size-4" />}
-            {isLastStep ? "Generate guidance" : stepIndex === 0 ? "Continue" : "Continue or skip"}
-          </button>
+      <GuidedActions
+        isLastStep={isLastStep}
+        stepIndex={stepIndex}
+        isSubmitting={isSubmitting}
+        canGenerate={hasEnoughToGenerate}
+        onBack={() => setStepIndex((current) => Math.max(current - 1, 0))}
+      />
+    </form>
+  );
+}
+
+function MobileStepProgress({
+  currentStep,
+  stepIndex,
+  progress,
+  onLoadDemo,
+}: {
+  currentStep: (typeof steps)[number];
+  stepIndex: number;
+  progress: number;
+  onLoadDemo: () => void;
+}) {
+  return (
+    <section className="rounded-[1.35rem] border border-emerald-950/10 bg-white p-4 shadow-[0_14px_40px_rgba(15,23,42,0.06)] md:hidden">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-xs font-black uppercase tracking-[0.16em] text-emerald-800">Step {stepIndex + 1} of {steps.length}</p>
+          <h1 className="mt-1 text-2xl font-black leading-tight tracking-tight text-slate-950">{currentStep.title}</h1>
+        </div>
+        <button
+          type="button"
+          onClick={onLoadDemo}
+          className="inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-full border border-emerald-900/15 bg-emerald-50 px-3 text-xs font-black text-emerald-900 shadow-sm transition hover:bg-emerald-100"
+        >
+          <Sparkles className="size-3.5" />
+          Use demo
+        </button>
+      </div>
+      <p className="mt-2 text-sm font-semibold leading-6 text-slate-600">
+        Only the first box is required. Skip anything you are not sure about.
+      </p>
+      <div className="mt-4">
+        <div className="mb-2 flex items-center justify-between text-[11px] font-black uppercase tracking-[0.12em] text-emerald-900">
+          <span>Progress</span>
+          <span>{Math.round(progress)}%</span>
+        </div>
+        <div className="h-2 overflow-hidden rounded-full bg-emerald-900/10">
+          <div
+            className="h-full rounded-full bg-emerald-800 transition-[width] duration-300 ease-out"
+            style={{ width: `${progress}%` }}
+          />
         </div>
       </div>
-    </form>
+    </section>
+  );
+}
+
+function DesktopStepProgress({
+  currentStep,
+  stepIndex,
+  progress,
+  onLoadDemo,
+  onStepChange,
+}: {
+  currentStep: (typeof steps)[number];
+  stepIndex: number;
+  progress: number;
+  onLoadDemo: () => void;
+  onStepChange: (index: number) => void;
+}) {
+  return (
+    <section className="hidden rounded-[1.5rem] border border-emerald-950/10 bg-white p-6 shadow-[0_18px_55px_rgba(15,23,42,0.06)] md:block">
+      <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+        <div>
+          <p className="text-sm font-black uppercase tracking-[0.22em] text-emerald-800">{currentStep.eyebrow}</p>
+          <h1 className="mt-2 max-w-3xl text-4xl font-black tracking-tight text-slate-950">
+            {currentStep.title}
+          </h1>
+          <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600">{currentStep.description}</p>
+        </div>
+        <button
+          type="button"
+          onClick={onLoadDemo}
+          className="inline-flex w-fit items-center gap-2 rounded-2xl border border-emerald-900/15 bg-emerald-50 px-4 py-3 text-sm font-black text-emerald-900 shadow-sm transition hover:-translate-y-0.5 hover:bg-emerald-100"
+        >
+          <Sparkles className="size-4" />
+          Load demo
+        </button>
+      </div>
+
+      <div className="mt-6">
+        <div className="mb-2 flex items-center justify-between text-xs font-black uppercase tracking-[0.14em] text-emerald-900">
+          <span>Progress</span>
+          <span>{Math.round(progress)}%</span>
+        </div>
+        <div className="h-2 overflow-hidden rounded-full bg-emerald-900/10">
+          <div
+            className="h-full rounded-full bg-emerald-800 transition-[width] duration-300 ease-out"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+      </div>
+
+      <div className="mt-5 grid gap-2 sm:grid-cols-3">
+        {steps.map((step, index) => {
+          const complete = index < stepIndex;
+          const active = index === stepIndex;
+
+          return (
+            <button
+              key={step.eyebrow}
+              type="button"
+              onClick={() => onStepChange(index)}
+              className={`flex min-h-12 items-center gap-2 rounded-2xl border px-3 py-2.5 text-left text-xs font-black transition ${
+                active
+                  ? "border-emerald-800 bg-emerald-800 text-white shadow-lg shadow-emerald-950/10"
+                  : complete
+                    ? "border-emerald-900/10 bg-emerald-50 text-emerald-900 hover:bg-emerald-100"
+                    : "border-slate-200 bg-slate-50 text-slate-500 hover:border-emerald-800/20"
+              }`}
+            >
+              {complete ? <CheckCircle2 className="size-4 shrink-0" /> : <span className="size-2 rounded-full bg-current" />}
+              <span>{step.title}</span>
+            </button>
+          );
+        })}
+      </div>
+    </section>
   );
 }
 
@@ -282,33 +339,37 @@ function SituationStep({
   toggleSupport: (option: string) => void;
 }) {
   return (
-    <div className="grid gap-5">
+    <div className="grid gap-4">
       <label className="block">
         <span className="text-sm font-black text-slate-900">Tell us what you need help with</span>
         <textarea
           value={intake.freeText}
           onChange={(event) => updateField("freeText", event.target.value)}
           placeholder="Example: I am a student and I need help with food, school expenses, and ID documents."
-          className="mt-3 min-h-40 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm leading-7 text-slate-900 outline-none transition focus:border-emerald-700 focus:bg-white focus:ring-4 focus:ring-emerald-700/10"
+          className="mt-3 min-h-32 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm leading-6 text-slate-900 outline-none transition focus:border-emerald-700 focus:bg-white focus:ring-4 focus:ring-emerald-700/10 sm:min-h-40 sm:leading-7"
         />
       </label>
 
       <div>
         <p className="text-sm font-black text-slate-900">Quick support areas</p>
-        <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="mt-3 grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-3">
           {supportOptions.map((option) => {
             const selected = intake.supportNeeded.includes(option);
+            const isHumanOption = option === "Human adviser";
             return (
               <button
                 type="button"
                 key={option}
                 onClick={() => toggleSupport(option)}
-                className={`rounded-2xl border px-4 py-4 text-left text-sm font-black transition hover:-translate-y-0.5 ${
+                className={`flex min-h-12 items-center gap-2 rounded-2xl border px-3 py-2.5 text-left text-xs font-black leading-tight transition hover:-translate-y-0.5 sm:px-4 sm:py-4 sm:text-sm ${
                   selected
                     ? "border-emerald-800 bg-emerald-800 text-white shadow-lg shadow-emerald-950/10"
+                    : isHumanOption
+                      ? "border-amber-200 bg-amber-50 text-amber-950 hover:border-amber-300 hover:bg-amber-100"
                     : "border-slate-200 bg-slate-50 text-slate-700 hover:border-emerald-700 hover:bg-emerald-50"
                 }`}
               >
+                {selected ? <CheckCircle2 className="size-4 shrink-0" /> : null}
                 {option}
               </button>
             );
@@ -417,11 +478,11 @@ function BasicDetailsStep({
           value={intake.incomeSituation}
           onChange={(event) => updateField("incomeSituation", event.target.value)}
           placeholder="Example: lost part-time job, no income this month"
-          className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-700 focus:bg-white focus:ring-4 focus:ring-emerald-700/10"
+          className="mt-2 min-h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-700 focus:bg-white focus:ring-4 focus:ring-emerald-700/10"
         />
       </label>
       ) : null}
-      <p className="rounded-2xl bg-emerald-50 p-4 text-xs font-bold leading-5 text-emerald-950 sm:col-span-2">
+      <p className="rounded-2xl bg-emerald-50 p-3 text-xs font-bold leading-5 text-emerald-950 sm:col-span-2 sm:p-4">
         Age and location are asked for every pathway. Other questions only appear when they help narrow the support or
         document checklist.
       </p>
@@ -484,7 +545,7 @@ function DocumentsStep({
         ]}
       />
       ) : null}
-      <div className="rounded-3xl bg-amber-50 p-5 text-sm font-semibold leading-6 text-amber-950 sm:col-span-2">
+      <div className="rounded-2xl bg-amber-50 p-4 text-sm font-semibold leading-6 text-amber-950 sm:col-span-2 sm:rounded-3xl sm:p-5">
         Not having a document does not mean the app rejects you. It means the checklist should include what to ask a
         student affairs office, social worker, official office, or verified adviser before applying.
       </div>
@@ -493,6 +554,7 @@ function DocumentsStep({
 }
 
 function LiveSummary({ intake, narrative }: { intake: IntakeFormData; narrative: string }) {
+  const [isExpanded, setIsExpanded] = useState(false);
   const summaryItems = [
     ["Support", intake.supportNeeded.length ? intake.supportNeeded.join(", ") : "Not selected"],
     ["Location", intake.location || "Not added"],
@@ -500,27 +562,141 @@ function LiveSummary({ intake, narrative }: { intake: IntakeFormData; narrative:
     ["ID", intake.hasId === "unknown" ? "Not sure" : formatValue(intake.hasId)],
   ];
   const situation = intake.freeText.trim();
+  const hasDetails = Boolean(situation || intake.supportNeeded.length || intake.location || intake.urgency !== "unknown" || intake.hasId !== "unknown");
+  const compactSummary = hasDetails
+    ? [
+        intake.supportNeeded[0] ?? "Support not selected",
+        intake.location || "Location not added",
+        intake.hasId === "unknown" ? "ID not sure" : `ID ${formatValue(intake.hasId)}`,
+      ].join(" - ")
+    : "Summary: no details added yet";
+
+  const showExpandedSummary = isExpanded || hasDetails;
 
   return (
-    <aside className="rounded-3xl border border-emerald-900/10 bg-emerald-50 p-4 lg:sticky lg:top-24 lg:self-start">
-      <p className="text-xs font-black uppercase tracking-[0.16em] text-emerald-800">Live summary</p>
-      <p className="mt-2 text-sm font-black leading-6 text-emerald-950">
-        {situation ? truncateText(situation, 110) : "Add a short situation or choose a support area."}
-      </p>
-      <div className="mt-4 grid gap-2">
-        {summaryItems.map(([label, value]) => (
-          <div key={label} className="rounded-2xl bg-white/80 p-3">
-            <p className="text-[11px] font-black uppercase tracking-[0.12em] text-emerald-800">{label}</p>
-            <p className="mt-1 text-xs font-bold leading-5 text-slate-700">{value}</p>
-          </div>
-        ))}
-      </div>
-      {!narrative.trim() ? (
-        <p className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-xs font-bold leading-5 text-amber-950">
-          Add at least one detail before generating guidance.
+    <>
+      <aside className="rounded-2xl border border-emerald-900/10 bg-emerald-50 p-3 lg:hidden">
+        <button
+          type="button"
+          onClick={() => setIsExpanded((current) => !current)}
+          className="flex min-h-11 w-full items-center justify-between gap-3 text-left"
+        >
+          <span>
+            <span className="block text-[11px] font-black uppercase tracking-[0.12em] text-emerald-800">Live summary</span>
+            <span className="mt-1 block text-xs font-black leading-5 text-emerald-950">{compactSummary}</span>
+          </span>
+          <ChevronDown className={`size-4 shrink-0 text-emerald-900 transition ${showExpandedSummary ? "rotate-180" : ""}`} />
+        </button>
+        {showExpandedSummary ? (
+          <>
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              {summaryItems.map(([label, value]) => (
+                <div key={label} className="rounded-2xl bg-white/80 p-3">
+                  <p className="text-[10px] font-black uppercase tracking-[0.1em] text-emerald-800">{label}</p>
+                  <p className="mt-1 text-xs font-bold leading-5 text-slate-700">{value}</p>
+                </div>
+              ))}
+            </div>
+            {!narrative.trim() ? (
+              <p className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-xs font-bold leading-5 text-amber-950">
+                Add at least one detail before generating guidance.
+              </p>
+            ) : null}
+          </>
+        ) : null}
+      </aside>
+
+      <aside className="hidden rounded-3xl border border-emerald-900/10 bg-emerald-50 p-4 lg:sticky lg:top-24 lg:block lg:self-start">
+        <p className="text-xs font-black uppercase tracking-[0.16em] text-emerald-800">Live summary</p>
+        <p className="mt-2 text-sm font-black leading-6 text-emerald-950">
+          {situation ? truncateText(situation, 110) : "Add a short situation or choose a support area."}
         </p>
-      ) : null}
-    </aside>
+        <div className="mt-4 grid gap-2">
+          {summaryItems.map(([label, value]) => (
+            <div key={label} className="rounded-2xl bg-white/80 p-3">
+              <p className="text-[11px] font-black uppercase tracking-[0.12em] text-emerald-800">{label}</p>
+              <p className="mt-1 text-xs font-bold leading-5 text-slate-700">{value}</p>
+            </div>
+          ))}
+        </div>
+        {!narrative.trim() ? (
+          <p className="mt-3 rounded-2xl border border-amber-200 bg-amber-50 p-3 text-xs font-bold leading-5 text-amber-950">
+            Add at least one detail before generating guidance.
+          </p>
+        ) : null}
+      </aside>
+    </>
+  );
+}
+
+function GuidedActions({
+  isLastStep,
+  stepIndex,
+  isSubmitting,
+  canGenerate,
+  onBack,
+}: {
+  isLastStep: boolean;
+  stepIndex: number;
+  isSubmitting: boolean;
+  canGenerate: boolean;
+  onBack: () => void;
+}) {
+  const submitDisabled = isLastStep ? !canGenerate : isSubmitting;
+  const submitLabel = isLastStep ? "Generate guidance" : "Continue";
+  const helperText = isLastStep
+    ? "Generate possible pathways, documents, next steps, and human verification guidance."
+    : "Only the first box is required. Skip anything you are not sure about.";
+
+  return (
+    <>
+      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-emerald-950/10 bg-white/95 px-4 py-3 shadow-[0_-14px_35px_rgba(15,23,42,0.08)] backdrop-blur md:hidden">
+        <div className="mx-auto flex max-w-5xl gap-2">
+          {stepIndex > 0 ? (
+            <button
+              type="button"
+              disabled={isSubmitting}
+              onClick={onBack}
+              className="inline-flex min-h-12 items-center justify-center gap-1.5 rounded-2xl border border-emerald-900/15 bg-white px-4 text-sm font-black text-emerald-900 transition hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              <ChevronLeft className="size-4" />
+              Back
+            </button>
+          ) : null}
+          <button
+            type="submit"
+            disabled={submitDisabled}
+            className="inline-flex min-h-12 flex-1 items-center justify-center gap-2 rounded-2xl bg-emerald-800 px-5 text-sm font-black text-white transition hover:bg-emerald-900 disabled:cursor-not-allowed disabled:bg-slate-400"
+          >
+            {isSubmitting ? <Loader2 className="size-4 animate-spin" /> : <ArrowRight className="size-4" />}
+            {submitLabel}
+          </button>
+        </div>
+      </div>
+
+      <div className="hidden flex-col justify-between gap-3 rounded-[1.5rem] border border-emerald-950/10 bg-[#eaf7ef] p-4 md:flex sm:flex-row sm:items-center">
+        <p className="text-sm font-semibold leading-6 text-emerald-950">{helperText}</p>
+        <div className="flex flex-wrap gap-3">
+          <button
+            type="button"
+            disabled={stepIndex === 0 || isSubmitting}
+            onClick={onBack}
+            className="inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-900/15 bg-white px-5 py-3 text-sm font-black text-emerald-900 transition hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            <ChevronLeft className="size-4" />
+            Back
+          </button>
+          <button
+            type="submit"
+            disabled={submitDisabled}
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-800 px-6 py-3 text-sm font-black text-white transition hover:bg-emerald-900 disabled:cursor-not-allowed disabled:bg-slate-400"
+          >
+            {isSubmitting ? <Loader2 className="size-4 animate-spin" /> : <ArrowRight className="size-4" />}
+            {isLastStep ? "Generate guidance" : stepIndex === 0 ? "Continue" : "Continue or skip"}
+          </button>
+        </div>
+      </div>
+    </>
   );
 }
 
@@ -550,7 +726,7 @@ function TextField({
         value={value}
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
-        className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-700 focus:bg-white focus:ring-4 focus:ring-emerald-700/10"
+        className="mt-2 min-h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-700 focus:bg-white focus:ring-4 focus:ring-emerald-700/10"
       />
     </label>
   );
@@ -573,7 +749,7 @@ function SelectField({
       <select
         value={value}
         onChange={(event) => onChange(event.target.value)}
-        className="mt-2 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-900 outline-none transition focus:border-emerald-700 focus:bg-white focus:ring-4 focus:ring-emerald-700/10"
+        className="mt-2 min-h-12 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-900 outline-none transition focus:border-emerald-700 focus:bg-white focus:ring-4 focus:ring-emerald-700/10"
       >
         {options.map(([optionValue, labelText]) => (
           <option key={optionValue} value={optionValue}>

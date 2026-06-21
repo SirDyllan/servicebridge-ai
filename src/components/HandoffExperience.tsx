@@ -14,12 +14,12 @@ export function HandoffExperience({
 }) {
   return (
     <section className={className}>
-      <section className="relative min-h-[360px] overflow-hidden rounded-[2rem] bg-[#244B35] shadow-[0_24px_80px_rgba(16,35,25,0.16)]">
+      <section className="relative min-h-[300px] overflow-hidden rounded-[1.5rem] bg-[#244B35] shadow-[0_24px_80px_rgba(16,35,25,0.16)] sm:min-h-[360px] sm:rounded-[2rem]">
         <div className="absolute inset-0 bg-[url('/images/search.jpg')] bg-cover bg-center" />
         <div className="absolute inset-0 bg-gradient-to-r from-[#244B35]/94 via-[#244B35]/66 to-[#0B2D4D]/24" />
-        <div className="relative z-10 flex min-h-[360px] flex-col justify-center px-6 py-12 text-white sm:px-10 lg:px-14">
+        <div className="relative z-10 flex min-h-[300px] flex-col justify-center px-5 py-10 text-white sm:min-h-[360px] sm:px-10 sm:py-12 lg:px-14">
           <p className="text-sm font-black uppercase tracking-[0.24em] text-white/80">Human verification step</p>
-          <h1 className="mt-4 max-w-4xl text-5xl font-black uppercase tracking-tight sm:text-7xl">
+          <h1 className="mt-4 max-w-4xl text-4xl font-black uppercase tracking-tight sm:text-7xl">
             Verify With a Human
           </h1>
           <p className="mt-5 max-w-3xl text-sm font-semibold leading-7 text-white/76 sm:text-base">

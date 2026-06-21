@@ -48,7 +48,7 @@ export function Footer() {
             <div className="mt-6 inline-flex max-w-xl items-start gap-3 rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-xs font-semibold leading-5 text-white/58">
               <ShieldCheck className="mt-0.5 size-4 shrink-0 text-[#B8793A]" />
               <span>
-                Guidance only — not official decisions. The AI prepares next steps; official agencies and trained humans
+                Guidance only - not official decisions. The AI prepares next steps; official agencies and trained humans
                 confirm eligibility.
               </span>
             </div>

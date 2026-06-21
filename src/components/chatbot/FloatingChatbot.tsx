@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { usePathname } from "next/navigation";
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { Bot, FileText, Loader2, MapPin, MessageCircle, Mic, Send, ShieldCheck, Volume2, VolumeX, X } from "lucide-react";
 import { buildIdentityOfficeSearchQuery } from "@/lib/officeRouting";
@@ -52,6 +53,7 @@ type SpeechRecognitionWindow = Window &
   };
 
 export function FloatingChatbot() {
+  const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<UiMessage[]>([welcomeMessage]);
   const [input, setInput] = useState("");
@@ -63,6 +65,7 @@ export function FloatingChatbot() {
   const [voiceStatus, setVoiceStatus] = useState("");
   const panelRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
+  const isIntakePage = pathname === "/intake";
 
   const lastResponse = useMemo(() => {
     return [...messages].reverse().find((message) => message.response)?.response;
@@ -269,9 +272,14 @@ export function FloatingChatbot() {
   }
 
   return (
-    <div id="chatbot" className="fixed bottom-5 right-5 z-40 scroll-mt-28">
+    <div
+      id="chatbot"
+      className={`fixed right-4 z-40 scroll-mt-28 md:right-5 ${
+        isIntakePage ? "bottom-24 md:bottom-5" : "bottom-5"
+      }`}
+    >
       {isOpen ? (
-        <div className="mb-4 flex h-[min(680px,calc(100vh-7rem))] w-[min(390px,calc(100vw-2rem))] flex-col overflow-hidden rounded-3xl border border-emerald-950/10 bg-white shadow-[0_24px_80px_rgba(15,23,42,0.22)]">
+        <div className="mb-4 flex h-[min(680px,calc(100vh-8rem))] w-[min(390px,calc(100vw-2rem))] flex-col overflow-hidden rounded-3xl border border-emerald-950/10 bg-white shadow-[0_24px_80px_rgba(15,23,42,0.22)]">
           <header className="flex items-center justify-between bg-emerald-900 px-4 py-4 text-white">
             <div className="flex items-center gap-3">
               <BotAvatar hasBotImage={hasBotImage} setHasBotImage={setHasBotImage} />
@@ -366,7 +374,11 @@ export function FloatingChatbot() {
       <div className="flex items-center justify-end gap-3">
         <div className="sb-pulse-ring sb-float relative">
           {!isOpen ? (
-            <span className="pointer-events-none absolute -top-10 right-0 whitespace-nowrap rounded-full bg-white px-3 py-1.5 text-xs font-black text-emerald-900 shadow-lg ring-1 ring-emerald-950/10">
+            <span
+              className={`pointer-events-none absolute -top-10 right-0 whitespace-nowrap rounded-full bg-white px-3 py-1.5 text-xs font-black text-emerald-900 shadow-lg ring-1 ring-emerald-950/10 ${
+                isIntakePage ? "hidden md:block" : ""
+              }`}
+            >
               Need help?
             </span>
           ) : null}
@@ -374,19 +386,22 @@ export function FloatingChatbot() {
             type="button"
             aria-label={isOpen ? "Close ServiceBridge AI chatbot" : "Open ServiceBridge AI chatbot"}
             onClick={() => setIsOpen((current) => !current)}
-            className="relative flex size-14 items-center justify-center overflow-hidden rounded-full bg-emerald-800 text-white shadow-[0_16px_45px_rgba(15,23,42,0.25)] ring-4 ring-white transition hover:scale-105 hover:bg-emerald-900 sm:size-16"
+            className={`relative flex items-center justify-center overflow-hidden bg-emerald-800 text-white shadow-[0_16px_45px_rgba(15,23,42,0.25)] ring-4 ring-white transition hover:scale-105 hover:bg-emerald-900 ${
+              isIntakePage ? "h-11 w-auto gap-2 rounded-full px-4 md:size-16 md:px-0" : "size-14 rounded-full sm:size-16"
+            }`}
           >
+            {isIntakePage ? <span className="relative z-10 text-xs font-black md:hidden">Need help?</span> : null}
             {hasBotImage ? (
               <Image
                 src="/images/bot.jpg"
                 alt=""
                 fill
                 sizes="64px"
-                className="object-cover"
+                className={`object-cover ${isIntakePage ? "hidden md:block" : ""}`}
                 onError={() => setHasBotImage(false)}
               />
             ) : (
-              <MessageCircle className="size-7" />
+              <MessageCircle className={`size-7 ${isIntakePage ? "hidden md:block" : ""}`} />
             )}
           </button>
         </div>

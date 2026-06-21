@@ -65,16 +65,16 @@ export function ProgramCards() {
 
         <div
           ref={rowRef}
-          className="sb-snap-row -mx-5 mt-10 flex gap-5 overflow-x-auto px-5 pb-5 sm:-mx-8 sm:px-8"
+          className="sb-snap-row -mx-5 mt-8 flex gap-4 overflow-x-auto px-5 pb-5 sm:-mx-8 sm:mt-10 sm:gap-5 sm:px-8"
           aria-label="Swipeable support program cards"
         >
           {programCards.map((program, index) => (
             <article
               key={program.id}
-              className="sb-snap-card sb-card-lift flex min-h-[670px] w-[86vw] max-w-[390px] shrink-0 flex-col overflow-hidden rounded-[1.5rem] border border-[#244B35]/10 bg-white shadow-[0_18px_55px_rgba(16,35,25,0.08)] md:w-[420px]"
+              className="sb-snap-card sb-card-lift flex min-h-[560px] w-[84vw] max-w-[360px] shrink-0 flex-col overflow-hidden rounded-[1.35rem] border border-[#244B35]/10 bg-white shadow-[0_18px_55px_rgba(16,35,25,0.08)] md:min-h-[670px] md:w-[420px] md:max-w-[390px] md:rounded-[1.5rem]"
               style={{ animationDelay: `${Math.min(index, 5) * 70}ms` }}
             >
-              <div className="relative h-52 overflow-hidden bg-[#F6F1E7]">
+              <div className="relative h-40 overflow-hidden bg-[#F6F1E7] sm:h-48 md:h-52">
                 <Image
                   src={program.image}
                   alt={`${program.name} program image`}
@@ -93,7 +93,7 @@ export function ProgramCards() {
                 </div>
               </div>
 
-              <div className="flex flex-1 flex-col p-5">
+              <div className="flex flex-1 flex-col p-4 sm:p-5">
                 <div className="flex items-start gap-2 rounded-2xl bg-[#E7F4F1] p-3 text-[#244B35]">
                   <ShieldCheck className="mt-0.5 size-4 shrink-0 text-[#0B7777]" />
                   <p className="text-xs font-black leading-5">
@@ -101,18 +101,18 @@ export function ProgramCards() {
                   </p>
                 </div>
 
-                <h3 className="mt-4 text-xl font-black tracking-tight text-[#244B35]">{program.name}</h3>
-                <p className="mt-3 text-sm font-semibold leading-7 text-[#244B35]/72">{program.summary}</p>
+                <h3 className="mt-4 text-lg font-black tracking-tight text-[#244B35] sm:text-xl">{program.name}</h3>
+                <p className="mt-2 text-sm font-semibold leading-6 text-[#244B35]/72 sm:mt-3 sm:leading-7">{program.summary}</p>
                 <p className="mt-3 rounded-2xl bg-[#F6F1E7] p-3 text-xs font-bold leading-5 text-[#244B35]">
                   {program.possibleEligibility}
                 </p>
 
-                <div className="mt-5">
+                <div className="mt-4 sm:mt-5">
                   <div className="flex items-center gap-2 text-sm font-black text-[#244B35]">
                     <FileCheck2 className="size-4 text-[#0B7777]" />
                     Documents needed
                   </div>
-                  <ul className="mt-3 grid gap-2">
+                  <ul className="mt-3 grid gap-1.5 sm:gap-2">
                     {program.documents.slice(0, 4).map((document) => (
                       <li key={document} className="flex gap-2 text-sm font-semibold leading-6 text-[#244B35]/72">
                         <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-[#0B7777]" />
@@ -122,12 +122,12 @@ export function ProgramCards() {
                   </ul>
                 </div>
 
-                <div className="mt-5 rounded-2xl border border-amber-200 bg-amber-50 p-4">
+                <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-3 sm:mt-5 sm:p-4">
                   <p className="text-xs font-black uppercase tracking-[0.14em] text-amber-900">Verification note</p>
                   <p className="mt-2 text-xs font-semibold leading-5 text-amber-950">{program.verificationNote}</p>
                 </div>
 
-                <div className="mt-auto flex flex-wrap items-center gap-2 pt-5">
+                <div className="mt-auto flex flex-wrap items-center gap-2 pt-4 sm:pt-5">
                   <Link
                     href="/intake"
                     className="sb-button-motion inline-flex items-center gap-2 rounded-full bg-[#B8793A] px-5 py-3 text-sm font-black text-white shadow-sm hover:bg-[#9f642f]"
