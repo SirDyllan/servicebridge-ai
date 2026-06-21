@@ -26,6 +26,23 @@ const phraseGroups = [
   },
   {
     category: "emergency" as const,
+    urgency: "emergency" as const,
+    phrases: [
+      "house caught fire",
+      "house is on fire",
+      "home caught fire",
+      "home is on fire",
+      "building is on fire",
+      "fire in my house",
+      "caught fire",
+      "on fire",
+      "trapped",
+      "gas leak",
+      "serious accident",
+    ],
+  },
+  {
+    category: "emergency" as const,
     urgency: "high" as const,
     phrases: ["no safe place", "sleep tonight", "homeless tonight", "no food today", "urgent", "emergency"],
   },
@@ -66,7 +83,9 @@ export function assessSafety(text: string): SafetyAssessment {
     matchedPhrases: matched.flatMap((group) => group.matchedPhrases),
     shouldLimitAdvice: true,
     safetyMessage:
-      selected.urgency === "emergency"
+      selected.urgency === "emergency" && selected.category === "emergency"
+        ? "This sounds like an active emergency. If you are in danger, leave the area if you can do so safely and contact local emergency services or the fire brigade now. ServiceBridge AI cannot replace emergency responders. After you are safe, I can help organize emergency relief, shelter, documents, and human/office handoff."
+        : selected.urgency === "emergency"
         ? "This may be urgent. Please contact a trusted human, local emergency service, student affairs office, social worker, or verified support organization now. ServiceBridge AI cannot handle emergencies or replace emergency help."
         : "This may need human verification before normal benefits guidance. Please speak with a student affairs office, social worker, official support office, or qualified adviser for the final decision.",
   };

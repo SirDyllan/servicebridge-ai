@@ -31,7 +31,7 @@ export function buildGroundedFallbackResponse(
   const urgentPrefix = safety.shouldLimitAdvice ? `${safety.safetyMessage} ` : "";
   const intakeStatus = retrieval.needsMoreInformation ? "needs_follow_up" : "ready_for_guidance";
   const needsClarification = retrieval.classification.primaryNeeds[0] === "Need not clear yet";
-  const reply = buildReply(retrieval, urgentPrefix);
+  const reply = buildReply(retrieval, urgentPrefix, safety);
 
   return {
     mode: "fallback",
@@ -56,8 +56,12 @@ export function buildGroundedFallbackResponse(
   };
 }
 
-function buildReply(retrieval: ChatRetrievalResult, urgentPrefix: string) {
+function buildReply(retrieval: ChatRetrievalResult, urgentPrefix: string, safety: SafetyAssessment) {
   const nextQuestion = retrieval.nextQuestion;
+
+  if (safety.urgency === "emergency") {
+    return buildImmediateEmergencyReply(retrieval, safety);
+  }
 
   if (retrieval.classification.primaryNeeds[0] === "Need not clear yet") {
     return urgentPrefix + buildClarifyingReply(nextQuestion);
@@ -79,6 +83,19 @@ function buildReply(retrieval: ChatRetrievalResult, urgentPrefix: string) {
   }
 
   return starter;
+}
+
+function buildImmediateEmergencyReply(retrieval: ChatRetrievalResult, safety: SafetyAssessment) {
+  const base =
+    safety.category === "emergency"
+      ? "This sounds like an active emergency. If you are in danger, leave the area if you can do so safely and contact local emergency services or the fire brigade now. ServiceBridge AI cannot replace emergency responders. After you are safe, this may connect to emergency relief, temporary shelter, food, clothing, document replacement, and human/office support."
+      : safety.safetyMessage;
+
+  if (retrieval.nextQuestion) {
+    return `${base} ${retrieval.nextQuestion}`;
+  }
+
+  return `${base} I can help organize recovery steps and documents after immediate safety is handled.`;
 }
 
 function buildSecondaryNeedText(retrieval: ChatRetrievalResult) {

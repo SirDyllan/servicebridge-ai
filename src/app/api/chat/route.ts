@@ -57,7 +57,12 @@ export async function POST(request: Request) {
     });
   }
 
-  if (!process.env.OPENAI_API_KEY || safety.category === "self-harm" || safety.category === "medical") {
+  if (
+    !process.env.OPENAI_API_KEY ||
+    safety.urgency === "emergency" ||
+    safety.category === "self-harm" ||
+    safety.category === "medical"
+  ) {
     return NextResponse.json({
       ...fallback,
       mode: "fallback",

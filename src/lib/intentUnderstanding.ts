@@ -16,7 +16,7 @@ const categorySignals = [
   {
     id: "emergency-relief",
     pattern:
-      /\b(emergency|urgent|today|tonight|right now|relief|crisis|homeless|no food today|shutoff|disconnect|utility bill|power bill|liheap)\b/i,
+      /\b(emergency|urgent|today|tonight|right now|relief|crisis|homeless|no food today|shutoff|disconnect|utility bill|power bill|liheap|house fire|caught fire|on fire|fire brigade|gas leak|disaster|temporary shelter)\b/i,
   },
   {
     id: "healthcare-access",

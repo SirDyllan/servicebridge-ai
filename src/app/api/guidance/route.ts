@@ -3,6 +3,7 @@ import OpenAI from "openai";
 import { buildFallbackGuidance, normalizeGuidance, retrieveServices } from "@/lib/retrieval";
 import { getServiceRecords } from "@/lib/firebase-rest";
 import { appendIntentContext, understandSupportIntent } from "@/lib/intentUnderstanding";
+import { assessSafety } from "@/lib/safety";
 import type { IntakeFormData } from "@/types/benefits";
 
 type GuidanceRequest = {
@@ -25,6 +26,16 @@ export async function POST(request: Request) {
   const retrieval = retrieveServices(query, directory.records);
   const fallback = buildFallbackGuidance(query, retrieval);
   const geminiKey = process.env.GEMINI_API_KEY;
+  const safety = assessSafety(baseQuery);
+
+  if (safety.urgency === "emergency" || safety.category === "self-harm" || safety.category === "medical") {
+    return NextResponse.json({
+      provider: "local-safety-fallback",
+      directorySource: directory.source,
+      retrieval,
+      guidance: fallback,
+    });
+  }
 
   if (openAiKey) {
     try {
@@ -148,7 +159,7 @@ function buildQuery(body: GuidanceRequest) {
 
 function buildGuidancePrompt(query: string, retrieval: ReturnType<typeof retrieveServices>) {
   return `
-Use only the support-record context below. If information is missing, say what is limited and ask a follow-up question. Frame matches as possible support pathways, not guaranteed eligibility.
+Use only the support-record context below. If information is missing, say what is limited and ask at most two follow-up questions. Questions must match the detected flow. Do not ask student or income questions for a document-only or driver's-license request unless the user clearly mentions school, income, employment, or a benefit application. Frame matches as possible support pathways, not guaranteed eligibility.
 
 User question:
 ${query}

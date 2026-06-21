@@ -381,8 +381,10 @@ function SituationStep({
 }
 
 function inferIntakeContext(intake: IntakeFormData): IntakeContext {
+  const freeText = intake.freeText.toLowerCase();
   const text = `${intake.freeText} ${intake.supportNeeded.join(" ")}`.toLowerCase();
   const mentions = (terms: string[]) => terms.some((term) => text.includes(term));
+  const freeTextMentions = (terms: string[]) => terms.some((term) => freeText.includes(term));
 
   const food = mentions(["food", "meal", "groceries", "snap", "hungry"]);
   const education = mentions(["education", "school", "student", "fees", "beam", "university", "college"]);
@@ -391,6 +393,36 @@ function inferIntakeContext(intake: IntakeFormData): IntakeContext {
   const emergency = mentions(["emergency", "urgent", "today", "relief", "bills", "utilities", "utility", "liheap"]);
   const employment = mentions(["employment", "job", "income", "unemployed", "lost job", "work", "business", "sme"]);
   const family = mentions(["family", "child", "children", "childcare", "dependent", "caregiver", "tanf"]);
+  const directDocumentOnly =
+    freeTextMentions(["driver license", "drivers license", "driver's license", "license", "licence", "dmv", "id", "birth certificate"]) &&
+    !freeTextMentions([
+      "food",
+      "meal",
+      "groceries",
+      "school fees",
+      "student support",
+      "health",
+      "medical",
+      "job",
+      "income",
+      "unemployed",
+      "family",
+      "childcare",
+      "emergency relief",
+      "utility",
+      "bills",
+    ]);
+
+  if (documents && directDocumentOnly) {
+    return {
+      needsStudent: false,
+      needsIncome: false,
+      needsUrgency: false,
+      needsDependents: false,
+      needsStudentLetter: false,
+      needsIncomeProof: false,
+    };
+  }
 
   return {
     needsStudent: education || food,

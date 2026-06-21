@@ -228,6 +228,12 @@ function buildFollowUpQuestions(
 ) {
   const normalized = message.toLowerCase();
 
+  if (isImmediateEmergencyMessage(normalized)) {
+    return mentionsLocation(normalized)
+      ? []
+      : ["What city or area are you in, so I can help narrow recovery/support office options after you are safe?"];
+  }
+
   if (lowInformation) {
     return buildLowInformationQuestions(normalized).slice(0, 1);
   }
@@ -394,6 +400,12 @@ function buildLowInformationQuestions(message: string) {
 function mentionsUrgency(message: string) {
   return ["urgent", "emergency", "today", "tonight", "this week", "right now", "can't breathe", "cannot breathe"].some(
     (term) => message.includes(term),
+  );
+}
+
+function isImmediateEmergencyMessage(message: string) {
+  return /\b(house caught fire|house is on fire|home caught fire|home is on fire|building is on fire|fire in my house|caught fire|on fire|trapped|gas leak|serious accident)\b/i.test(
+    message,
   );
 }
 

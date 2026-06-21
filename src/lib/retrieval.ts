@@ -227,46 +227,178 @@ function mentionsBusinessNeed(query: string) {
   );
 }
 
+function mentionsLocation(query: string) {
+  return (
+    /\b(mutare|harare|bulawayo|gweru|masvingo|zimbabwe|texas|houston|dallas|austin|usa|united states|america)\b/i.test(
+      query,
+    ) || /\b(in|near|around|at)\s+[a-z][a-z\s-]{2,40}\b/i.test(query)
+  );
+}
+
+function mentionsDriverLicenseNeed(query: string) {
+  return /\b(driver'?s?\s+license|drivers\s+license|driving\s+license|licence|license|dmv|learner'?s?\s+permit|learner permit)\b/i.test(
+    query,
+  );
+}
+
+function isImmediateEmergencyQuery(query: string) {
+  return /\b(house caught fire|house is on fire|home caught fire|home is on fire|building is on fire|fire in my house|caught fire|on fire|trapped|gas leak|serious accident)\b/i.test(
+    query,
+  );
+}
+
+function shouldAskIncomeQuestion(query: string, categoryId: string) {
+  if (categoryId === "document-readiness" || categoryId === "healthcare-access") return false;
+  if (/\b(income|lost job|lost income|unemployed|no income|proof of income|payslip)\b/i.test(query)) return false;
+  return ["food-support", "emergency-relief", "employment-youth", "family-childcare"].includes(categoryId);
+}
+
+function shouldAskStudentQuestion(query: string, categoryId: string) {
+  if (categoryId === "document-readiness") return false;
+  if (/\b(student|school|college|university|enrolled|learner)\b/i.test(query)) return false;
+  return ["education-support", "student-welfare"].includes(categoryId);
+}
+
 export function buildFallbackGuidance(query: string, retrieval: RetrievalResult): BenefitsGuidance {
   const possibleMatches = retrieval.records.map((record, index) => recordToMatch(record, query, index));
-  const documentReadiness = buildDocumentReadiness(query, retrieval.records);
+  const documentReadiness = buildDocumentReadiness(query, retrieval.records, retrieval.categoryId);
+  const followUpQuestions = buildContextualFollowUpQuestions(query, retrieval);
+  const nextSteps = buildContextualNextSteps(query, retrieval);
+  const humanReferral = buildContextualHumanReferral(query, retrieval);
 
   return {
     summary:
-      "You may match one or more support pathways, but this is not a final eligibility decision. The safest next step is to prepare documents, review the possible matches, and verify with the official office or a human adviser.",
-    followUpQuestions: [
-      "What city, campus, or area should be used to narrow support options?",
-      "Do you have an ID, proof of residence, proof of income or unemployment, and a student letter?",
-      "Is the food or financial need urgent today, this week, or part of a normal application?",
-    ],
+      isImmediateEmergencyQuery(query)
+        ? "This may be an active emergency first and a support-navigation issue second. Immediate safety and emergency responders come before benefit or document guidance."
+        : "You may match one or more support pathways, but this is not a final eligibility decision. The safest next step is to prepare documents, review the possible matches, and verify with the official office or a human adviser.",
+    followUpQuestions,
     possibleMatches,
     documentReadiness,
-    nextSteps: [
-      "Review the possible support pathways and note what is uncertain.",
-      "Prepare the missing documents in the checklist before applying or visiting an office.",
-      "Contact a student affairs office, social worker, public support office, or verified organization for final eligibility verification.",
-    ],
+    nextSteps,
     safetyNote: `${retrieval.safetyNote} ${retrieval.directoryNote}`,
-    humanReferral: {
-      title: "Human verification required",
+    humanReferral,
+  };
+}
+
+function buildContextualFollowUpQuestions(query: string, retrieval: RetrievalResult) {
+  const normalized = query.toLowerCase();
+  const questions: string[] = [];
+
+  if (isImmediateEmergencyQuery(normalized)) {
+    if (!mentionsLocation(normalized)) {
+      questions.push("What city or area are you in, after you are safe, so recovery/support office options can be narrowed?");
+    }
+    return questions;
+  }
+
+  if (!mentionsLocation(normalized)) {
+    questions.push(
+      retrieval.categoryId === "document-readiness"
+        ? "What city, state, or country should be used to narrow the official document office?"
+        : "What city, campus, or area should be used to narrow support options?",
+    );
+  }
+
+  if (retrieval.categoryId === "document-readiness") {
+    if (mentionsDriverLicenseNeed(normalized)) {
+      questions.push("Are you applying for a new driver's license, replacing one, or checking the document list first?");
+    } else if (!mentionsIdentityNeed(normalized)) {
+      questions.push("Are you applying for a new ID, replacing a lost ID, or checking documents for another application?");
+    }
+
+    return questions.slice(0, 2);
+  }
+
+  if (retrieval.categoryId === "healthcare-access" && !/\b(urgent|emergency|today|right now)\b/i.test(normalized)) {
+    questions.push("Is this urgent right now, or are you looking for help accessing affordable healthcare support?");
+  }
+
+  if (shouldAskIncomeQuestion(normalized, retrieval.categoryId)) {
+    questions.push("Do you have any income right now, or did your income recently change?");
+  }
+
+  if (shouldAskStudentQuestion(normalized, retrieval.categoryId)) {
+    questions.push("Are you currently enrolled at a school, college, or university?");
+  }
+
+  return questions.slice(0, 2);
+}
+
+function buildContextualNextSteps(query: string, retrieval: RetrievalResult) {
+  if (isImmediateEmergencyQuery(query)) {
+    return [
+      "If there is active danger, leave the area if safe and contact local emergency services or the fire brigade now.",
+      "After you are safe, ask a trusted human, social services office, or verified relief organization about temporary shelter, food, clothing, and urgent recovery help.",
+      "When safe, prepare a short explanation of what happened and ask which documents can wait until later.",
+    ];
+  }
+
+  if (retrieval.categoryId === "document-readiness") {
+    return [
+      "Confirm which official office handles the license, ID, or civil-registration process in your area.",
+      "Prepare identity proof, proof of residence, and any previous license or ID record if available.",
+      "Verify appointment, fee, form, and accepted-document rules before travelling.",
+    ];
+  }
+
+  return [
+    "Review the possible support pathways and note what is uncertain.",
+    "Prepare only the documents that fit this pathway before applying or visiting an office.",
+    "Contact a student affairs office, social worker, public support office, or verified organization for final eligibility verification.",
+  ];
+}
+
+function buildContextualHumanReferral(query: string, retrieval: RetrievalResult) {
+  if (isImmediateEmergencyQuery(query)) {
+    return {
+      title: "Immediate human help required",
       reason:
-        "Benefit eligibility, deadlines, document rules, and emergency support decisions can change by location and program.",
+        "Active emergencies need emergency responders or trusted humans first. The AI can only help organize recovery information after immediate safety is handled.",
       options: [
-        "Student affairs or student welfare office",
-        "Social worker or community case worker",
-        "Official public support or welfare office",
-        "Verified food-relief or emergency-support organization",
+        "Local emergency services or fire brigade",
+        "Trusted nearby adult, neighbour, school official, or community leader",
+        "Social services office or verified disaster relief organization",
+        "Police, fire, ambulance, or emergency response provider where appropriate",
       ],
       verificationStep:
-        "Take the AI checklist and ask the human adviser to confirm eligibility, required documents, deadlines, and where to apply.",
-    },
+        "After you are safe, ask the responder or support provider what recovery documents, incident proof, temporary shelter, food, clothing, and replacement-document steps are needed.",
+    };
+  }
+
+  if (retrieval.categoryId === "document-readiness") {
+    return {
+      title: "Official document office verification required",
+      reason:
+        "License, ID, birth-certificate, and residence-proof rules depend on the official office and location.",
+      options: [
+        "DMV, licensing office, or state ID office in the USA",
+        "Civil Registry, National Registry, or National ID office in Zimbabwe",
+        "Official document or civil-registration office in other locations",
+      ],
+      verificationStep:
+        "Ask the official office to confirm accepted documents, fees, forms, appointments, and whether alternatives are allowed.",
+    };
+  }
+
+  return {
+    title: "Human verification required",
+    reason:
+      "Benefit eligibility, deadlines, document rules, and emergency support decisions can change by location and program.",
+    options: [
+      "Student affairs or student welfare office",
+      "Social worker or community case worker",
+      "Official public support or welfare office",
+      "Verified food-relief or emergency-support organization",
+    ],
+    verificationStep:
+      "Take the AI checklist and ask the human adviser to confirm eligibility, required documents, deadlines, and where to apply.",
   };
 }
 
 export function normalizeGuidance(raw: Partial<BenefitsGuidance>, fallback: BenefitsGuidance): BenefitsGuidance {
   return {
     summary: asText(raw.summary, fallback.summary),
-    followUpQuestions: asStringArray(raw.followUpQuestions, fallback.followUpQuestions),
+    followUpQuestions: asStringArray(raw.followUpQuestions, fallback.followUpQuestions).slice(0, 2),
     possibleMatches: rankMatchesLikeFallback(normalizeMatches(raw.possibleMatches, fallback.possibleMatches), fallback.possibleMatches),
     documentReadiness: {
       summary: asText(raw.documentReadiness?.summary, fallback.documentReadiness.summary),
@@ -572,10 +704,51 @@ function getMatchLevel(index: number, record: ServiceRecord): MatchLevel {
   return "Low";
 }
 
-function buildDocumentReadiness(query: string, records: ServiceRecord[]) {
+function buildDocumentReadiness(query: string, records: ServiceRecord[], categoryId: string) {
   const normalized = query.toLowerCase();
-  const items: DocumentChecklistItem[] = [
-    {
+  const items: DocumentChecklistItem[] = [];
+  const documentOnly = categoryId === "document-readiness";
+  const immediateEmergency = isImmediateEmergencyQuery(normalized);
+  const needsIncomeProof =
+    !documentOnly &&
+    !immediateEmergency &&
+    (["food-support", "emergency-relief", "employment-youth", "family-childcare"].includes(categoryId) ||
+      /\b(food|snap|liheap|utility|cash|income|lost job|unemployed|family|child|dependent)\b/i.test(normalized));
+  const needsStudentProof =
+    !documentOnly &&
+    !immediateEmergency &&
+    (["education-support", "student-welfare"].includes(categoryId) ||
+      /\b(student|school|college|university|beam|fees|campus)\b/i.test(normalized));
+
+  if (immediateEmergency) {
+    items.push(
+      {
+        name: "Current safe location",
+        status: mentionsLocation(normalized) ? "available" : "unknown",
+        guidance:
+          "Emergency responders or trusted humans need to know where the person is. Only share location when it is safe to do so.",
+      },
+      {
+        name: "Short explanation of what happened",
+        status: normalized.length > 20 ? "available" : "unknown",
+        guidance:
+          "After immediate safety is handled, write a short summary for social services, relief providers, school officials, or document-replacement offices.",
+      },
+      {
+        name: "ID if available after safety is handled",
+        status: normalized.includes("has id: yes") ? "available" : normalized.includes("has id: no") ? "missing" : "unknown",
+        guidance:
+          "Do not go back into danger to collect ID. If documents were lost, ask the relief provider which alternatives are accepted.",
+      },
+      {
+        name: "Fire, police, or incident report if issued later",
+        status: "unknown",
+        guidance:
+          "Only prepare this after responders or officials provide it. Do not delay emergency help while looking for paperwork.",
+      },
+    );
+  } else {
+    items.push({
       name: "ID or alternative identity proof",
       status:
         normalized.includes("has id: no") ||
@@ -588,8 +761,9 @@ function buildDocumentReadiness(query: string, records: ServiceRecord[]) {
             : "unknown",
       guidance:
         "Most support pathways ask for identity proof. If ID is missing, prepare a birth certificate or other official identity evidence where available.",
-    },
-    {
+    });
+
+    items.push({
       name: "Proof of residence",
       status: normalized.includes("has proof of residence: yes")
         ? "available"
@@ -597,51 +771,77 @@ function buildDocumentReadiness(query: string, records: ServiceRecord[]) {
           ? "missing"
           : "unknown",
       guidance: "Rules differ by location. Ask the official office what counts as acceptable proof of residence.",
-    },
-    {
-      name: "Proof of income or unemployment",
-      status: normalized.includes("has proof of income/unemployment: yes")
-        ? "available"
-        : normalized.includes("has proof of income/unemployment: no")
-          ? "missing"
-          : normalized.includes("lost") || normalized.includes("unemployed")
-            ? "unknown"
+    });
+
+    if (documentOnly && mentionsDriverLicenseNeed(normalized)) {
+      items.push({
+        name: "Previous license, learner permit, or driver record if available",
+        status: "unknown",
+        guidance:
+          "Driver's-license rules depend on the official licensing office. Ask which previous records or test documents are accepted.",
+      });
+    }
+
+    if (needsIncomeProof) {
+      items.push({
+        name: "Proof of income or unemployment",
+        status: normalized.includes("has proof of income/unemployment: yes")
+          ? "available"
+          : normalized.includes("has proof of income/unemployment: no")
+            ? "missing"
+            : normalized.includes("lost") || normalized.includes("unemployed")
+              ? "unknown"
+              : "unknown",
+        guidance:
+          "Prepare a short work-history note, termination message, income-change evidence, payslip, or unemployment proof if available.",
+      });
+    }
+
+    if (needsStudentProof) {
+      items.push({
+        name: "Student letter or proof of enrollment",
+        status: normalized.includes("has student letter: yes")
+          ? "available"
+          : normalized.includes("has student letter: no")
+            ? "missing"
             : "unknown",
-      guidance:
-        "Prepare a short work-history note, termination message, income-change evidence, payslip, or unemployment proof if available.",
-    },
-    {
-      name: "Student letter or proof of enrollment",
-      status: normalized.includes("has student letter: yes")
-        ? "available"
-        : normalized.includes("has student letter: no")
-          ? "missing"
-          : "unknown",
-      guidance: "Student support pathways usually need a student card, student number, or enrollment letter.",
-    },
-    {
+        guidance: "Student support pathways usually need a student card, student number, or enrollment letter.",
+      });
+    }
+
+    items.push({
       name: "Birth certificate if ID is missing",
       status: normalized.includes("no id") || normalized.includes("do not have an id") ? "missing" : "unknown",
       guidance: "If an ID is missing, ask the identity-document office whether a birth certificate or guardian document is needed.",
-    },
-  ];
+    });
+  }
 
   const allDocuments = Array.from(new Set(records.flatMap((record) => record.documentsNeeded)));
   const missingDocuments = items.filter((item) => item.status === "missing").map((item) => item.name);
+  const summary = immediateEmergency
+    ? "Immediate safety comes first. These items are for recovery support after the person is safe, not a condition for emergency response."
+    : documentOnly
+      ? "This checklist is focused on the document or license process. Income and student proof are only needed if the official office or a separate benefit program asks for them."
+      : missingDocuments.length > 0
+        ? `You have ${missingDocuments.length} important missing document area${missingDocuments.length === 1 ? "" : "s"} to prepare before applying.`
+        : "Some document statuses are still unknown. Confirm the checklist before applying or visiting an office.";
 
   return {
-    summary:
-      missingDocuments.length > 0
-        ? `You have ${missingDocuments.length} important missing document area${missingDocuments.length === 1 ? "" : "s"} to prepare before applying.`
-        : "Some document statuses are still unknown. Confirm the checklist before applying or visiting an office.",
+    summary,
     items,
     missingDocuments,
-    idPreparationSteps: [
-      "Confirm which official office handles ID or civil registration in your area.",
-      "Prepare a birth certificate or existing identity proof if available.",
-      "Ask whether guardian or parent documents are required for your age and context.",
-      "Ask whether proof of residence, an application form, a report, or a fee is required before traveling.",
-    ],
+    idPreparationSteps: immediateEmergency
+      ? [
+          "Do not return to danger for documents.",
+          "After safety is handled, ask responders or a relief provider what proof can be created later.",
+          "If documents were lost, ask which identity alternatives are accepted for relief, shelter, or replacement documents.",
+        ]
+      : [
+          "Confirm which official office handles ID, licensing, or civil registration in your area.",
+          "Prepare a birth certificate or existing identity proof if available.",
+          "Ask whether guardian or parent documents are required for your age and context.",
+          "Ask whether proof of residence, an application form, a report, or a fee is required before traveling.",
+        ],
     allDocuments,
   };
 }
