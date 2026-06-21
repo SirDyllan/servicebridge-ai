@@ -17,7 +17,8 @@ const welcomeMessage: UiMessage = {
     "Hi, I'm ServiceBridge AI. Tell me what support you need, and I'll help you prepare possible benefit pathways, documents, next steps, and a human verification route.",
 };
 
-const defaultActions = ["Create checklist", "Show required documents", "Find nearby office", "Speak to human"];
+const priorityActions = ["Find nearby office", "Speak to human"];
+const defaultActions = [...priorityActions, "Create checklist", "Show required documents"];
 
 type SpeechRecognitionEventLike = {
   results: {
@@ -315,7 +316,7 @@ export function FloatingChatbot() {
               </div>
             ) : null}
             <div className="mb-3 flex gap-2 overflow-x-auto pb-1">
-              {(lastResponse?.actions ?? defaultActions).map((action) => (
+              {orderedQuickActions(lastResponse?.actions ?? defaultActions).map((action) => (
                 <button
                   type="button"
                   key={action}
@@ -392,6 +393,20 @@ export function FloatingChatbot() {
       </div>
     </div>
   );
+}
+
+function orderedQuickActions(actions: string[]) {
+  const uniqueActions = Array.from(new Set([...priorityActions, ...actions]));
+
+  return uniqueActions.sort((left, right) => {
+    const leftPriority = priorityActions.indexOf(left);
+    const rightPriority = priorityActions.indexOf(right);
+    const leftRank = leftPriority === -1 ? 99 : leftPriority;
+    const rightRank = rightPriority === -1 ? 99 : rightPriority;
+
+    if (leftRank !== rightRank) return leftRank - rightRank;
+    return actions.indexOf(left) - actions.indexOf(right);
+  });
 }
 
 function BotAvatar({

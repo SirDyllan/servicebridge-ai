@@ -118,7 +118,7 @@ export default function Home() {
       <Navbar />
       <Hero />
 
-      <ScrollReveal as="section" id="benefits" className="relative bg-[#6F835F] px-5 pb-28 pt-16 text-white sm:px-8 lg:pb-36">
+      <ScrollReveal as="section" id="benefits" className="relative bg-[#6F835F] px-5 pb-20 pt-16 text-white sm:px-8 lg:pb-24">
         <div className="mx-auto max-w-7xl">
           <div className="grid gap-8 lg:grid-cols-[0.78fr_1.22fr] lg:items-end">
             <div className="sb-fade-up">
@@ -177,7 +177,7 @@ export default function Home() {
           </div>
         </div>
 
-        <div className="mt-12 px-0 lg:absolute lg:inset-x-0 lg:bottom-0 lg:mt-0 lg:translate-y-1/2 lg:px-8">
+        <div className="mt-12 px-0">
           <div className="mx-auto grid max-w-6xl gap-4 lg:grid-cols-3">
             {floatingCards.map((card) => {
               const Icon = card.icon;
@@ -201,7 +201,7 @@ export default function Home() {
       <ScrollReveal
         as="section"
         id="how-it-works"
-        className="bg-[linear-gradient(180deg,#ffffed_0%,#ffffed_78%,#F6F1E7_100%)] px-5 pb-20 pt-16 text-[#244B35] sm:px-8 lg:pt-36"
+        className="bg-[linear-gradient(180deg,#ffffed_0%,#ffffed_78%,#F6F1E7_100%)] px-5 pb-20 pt-16 text-[#244B35] sm:px-8 lg:pt-24"
       >
         <div className="mx-auto max-w-7xl">
           <div className="sb-fade-up mx-auto max-w-4xl text-center">
