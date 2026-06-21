@@ -23,7 +23,12 @@ export function retrieveServices(query: string, directoryRecords: ServiceRecord[
   const guardrail = detectGuardrails(query);
   const category = serviceCategories.find((item) => item.id === guardrail.categoryId) ?? serviceCategories[0];
   const normalized = query.toLowerCase();
-  const allowedCategoryIds = new Set(getRelatedCategoryIds(guardrail.categoryId));
+  const selectedCategoryIds = selectedSupportCategoryIds(normalized);
+  const allowedCategoryIds = new Set([
+    ...getRelatedCategoryIds(guardrail.categoryId),
+    ...selectedCategoryIds,
+    ...Array.from(selectedCategoryIds).flatMap((categoryId) => getRelatedCategoryIds(categoryId).slice(0, 2)),
+  ]);
 
   const scoredRecords = directoryRecords
     .filter((record) => allowedCategoryIds.has(record.categoryId) || regionalBoost(record, normalized) > 0)
@@ -43,27 +48,40 @@ export function retrieveServices(query: string, directoryRecords: ServiceRecord[
         .join(" ")
         .toLowerCase();
 
-      const queryTerms = normalized.split(/\W+/).filter((term) => term.length > 2);
+      const queryTerms = meaningfulQueryTerms(normalized);
       const keywordScore = queryTerms.filter((term) => searchable.includes(term)).length;
       const explicitKeywordScore = record.keywords.filter((keyword) => normalized.includes(keyword)).length * 2;
       const categoryScore = record.categoryId === guardrail.categoryId ? 6 : 0;
+      const selectedSupportScore = selectedCategoryIds.has(record.categoryId) ? 8 : 0;
       const verificationScore =
         record.verificationStatus === "verified" ? 2 : record.verificationStatus === "needs_review" ? -1 : 0;
 
       return {
         record,
-        score: categoryScore + keywordScore + explicitKeywordScore + verificationScore + regionalBoost(record, normalized),
+        score:
+          categoryScore +
+          selectedSupportScore +
+          keywordScore +
+          explicitKeywordScore +
+          verificationScore +
+          regionalBoost(record, normalized),
       };
     })
-    .filter((item) => item.score > 0)
+    .filter((item) => {
+      if (item.record.categoryId === guardrail.categoryId || selectedCategoryIds.has(item.record.categoryId)) {
+        return item.score > 0;
+      }
+
+      return item.score >= 4;
+    })
     .sort((a, b) => b.score - a.score);
 
-  const records = pickResultRecords(scoredRecords, directoryRecords, guardrail.categoryId);
+  const records = pickResultRecords(scoredRecords, directoryRecords, guardrail.categoryId, normalized, selectedCategoryIds);
   const coverage = getCoverage(records);
 
   return {
     categoryId: category.id,
-    categoryName: category.name,
+    categoryName: selectedCategoryIds.size ? selectedCategoryNames(selectedCategoryIds).join(", ") : category.name,
     urgency: guardrail.urgency,
     matchedKeywords: guardrail.matchedKeywords,
     records,
@@ -275,10 +293,28 @@ export function guidanceToLegacyServiceOptions(guidance: BenefitsGuidance) {
   }));
 }
 
-function pickResultRecords(scoredRecords: ScoredRecord[], directoryRecords: ServiceRecord[], categoryId: string) {
-  const picked = scoredRecords.slice(0, 4).map((item) => item.record);
+function pickResultRecords(
+  scoredRecords: ScoredRecord[],
+  directoryRecords: ServiceRecord[],
+  categoryId: string,
+  query: string,
+  selectedCategoryIds: Set<string>,
+) {
+  const includeDocumentReadiness = categoryId === "document-readiness" || mentionsDocumentBarrier(query);
+  const includeHumanReferral = categoryId === "human-referral" || mentionsHumanReferralNeed(query);
+  const picked: ServiceRecord[] = [];
 
-  for (const mustHave of ["document-readiness", "human-referral"]) {
+  for (const item of scoredRecords) {
+    if (item.record.categoryId === "document-readiness" && !includeDocumentReadiness) continue;
+    if (item.record.categoryId === "human-referral" && !includeHumanReferral) continue;
+    if (!picked.some((record) => record.id === item.record.id)) picked.push(item.record);
+    if (picked.length >= 5) break;
+  }
+
+  for (const mustHave of [
+    includeDocumentReadiness ? "document-readiness" : "",
+    includeHumanReferral ? "human-referral" : "",
+  ].filter(Boolean)) {
     if (!picked.some((record) => record.categoryId === mustHave)) {
       const supportRecord = directoryRecords.find((record) => record.categoryId === mustHave);
       if (supportRecord) picked.push(supportRecord);
@@ -286,10 +322,94 @@ function pickResultRecords(scoredRecords: ScoredRecord[], directoryRecords: Serv
   }
 
   if (!picked.length) {
-    return directoryRecords.filter((record) => record.categoryId === categoryId).slice(0, 3);
+    const fallbackCategoryIds = selectedCategoryIds.size ? selectedCategoryIds : new Set([categoryId]);
+    return directoryRecords
+      .filter((record) => fallbackCategoryIds.has(record.categoryId))
+      .filter((record) => record.categoryId !== "human-referral")
+      .slice(0, 4);
   }
 
   return picked.slice(0, 5);
+}
+
+function selectedSupportCategoryIds(query: string) {
+  const selectedLine = query.match(/user selected support areas:\s*(.+)/i)?.[1]?.toLowerCase() ?? "";
+  const selected = new Set<string>();
+  if (!selectedLine) return selected;
+
+  if (/\bfood\b|snap/.test(selectedLine)) selected.add("food-support");
+  if (/education|school|beam/.test(selectedLine)) selected.add("education-support");
+  if (/student welfare|student affairs|campus/.test(selectedLine)) selected.add("student-welfare");
+  if (/emergency|bills|utilit|liheap/.test(selectedLine)) selected.add("emergency-relief");
+  if (/\bid\b|document/.test(selectedLine)) selected.add("document-readiness");
+  if (/health/.test(selectedLine)) selected.add("healthcare-access");
+  if (/employment|job|business|sme/.test(selectedLine)) selected.add("employment-youth");
+  if (/family|childcare|child/.test(selectedLine)) selected.add("family-childcare");
+  if (/human|adviser|advisor/.test(selectedLine)) selected.add("human-referral");
+
+  return selected;
+}
+
+function selectedCategoryNames(categoryIds: Set<string>) {
+  return Array.from(categoryIds).map((categoryId) => {
+    return serviceCategories.find((category) => category.id === categoryId)?.name ?? categoryId;
+  });
+}
+
+function meaningfulQueryTerms(query: string) {
+  const stopwords = new Set([
+    "the",
+    "and",
+    "for",
+    "with",
+    "that",
+    "this",
+    "from",
+    "user",
+    "selected",
+    "support",
+    "areas",
+    "area",
+    "situation",
+    "need",
+    "needs",
+    "help",
+    "location",
+    "city",
+    "country",
+    "campus",
+    "status",
+    "proof",
+    "has",
+    "yes",
+    "not",
+    "available",
+    "unknown",
+    "normal",
+    "week",
+    "this_week",
+    "zimbabwe",
+    "usa",
+    "united",
+    "states",
+  ]);
+
+  return query
+    .split(/\W+/)
+    .map((term) => term.trim())
+    .filter((term) => term.length > 2 && !stopwords.has(term));
+}
+
+function mentionsDocumentBarrier(query: string) {
+  return /\b(has id:\s*no|has proof of residence:\s*no|has student letter:\s*no|has proof of income\/unemployment:\s*no|do not have an id|don't have an id|no id|missing id|lost id|birth certificate|proof of residence|id\/documents)\b/i.test(
+    query,
+  );
+}
+
+function mentionsHumanReferralNeed(query: string) {
+  return /\b(human adviser|human advisor|social worker|case worker|official verification|speak to human|human referral)\b/i.test(
+    query,
+  );
 }
 
 function getCoverage(records: ServiceRecord[]): RetrievalResult["coverage"] {
@@ -416,24 +536,46 @@ function buildDocumentReadiness(query: string, records: ServiceRecord[]) {
   const items: DocumentChecklistItem[] = [
     {
       name: "ID or alternative identity proof",
-      status: normalized.includes("do not have an id") || normalized.includes("don't have an id") ? "missing" : "unknown",
+      status:
+        normalized.includes("has id: no") ||
+        normalized.includes("do not have an id") ||
+        normalized.includes("don't have an id") ||
+        normalized.includes("no id")
+          ? "missing"
+          : normalized.includes("has id: yes")
+            ? "available"
+            : "unknown",
       guidance:
         "Most support pathways ask for identity proof. If ID is missing, prepare a birth certificate or other official identity evidence where available.",
     },
     {
       name: "Proof of residence",
-      status: normalized.includes("proof of residence") ? "available" : "unknown",
+      status: normalized.includes("has proof of residence: yes")
+        ? "available"
+        : normalized.includes("has proof of residence: no")
+          ? "missing"
+          : "unknown",
       guidance: "Rules differ by location. Ask the official office what counts as acceptable proof of residence.",
     },
     {
       name: "Proof of income or unemployment",
-      status: normalized.includes("lost") || normalized.includes("unemployed") ? "missing" : "unknown",
+      status: normalized.includes("has proof of income/unemployment: yes")
+        ? "available"
+        : normalized.includes("has proof of income/unemployment: no")
+          ? "missing"
+          : normalized.includes("lost") || normalized.includes("unemployed")
+            ? "unknown"
+            : "unknown",
       guidance:
         "Prepare a short work-history note, termination message, income-change evidence, payslip, or unemployment proof if available.",
     },
     {
       name: "Student letter or proof of enrollment",
-      status: normalized.includes("student") ? "unknown" : "unknown",
+      status: normalized.includes("has student letter: yes")
+        ? "available"
+        : normalized.includes("has student letter: no")
+          ? "missing"
+          : "unknown",
       guidance: "Student support pathways usually need a student card, student number, or enrollment letter.",
     },
     {

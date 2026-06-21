@@ -120,25 +120,27 @@ function buildQuery(body: GuidanceRequest) {
 
   if (!intake) return freeText;
 
+  const hasValue = (value: unknown) => typeof value === "string" && value.trim() && value !== "unknown";
+  const formatValue = (value: string) => value.replace(/_/g, " ");
   const intakeSummary = [
-    intake.age ? `Age: ${intake.age}` : "",
-    intake.studentStatus ? `Student status: ${intake.studentStatus}` : "",
-    intake.employmentStatus ? `Employment status: ${intake.employmentStatus}` : "",
-    intake.incomeSituation ? `Income situation: ${intake.incomeSituation}` : "",
-    intake.dependents ? `Dependents: ${intake.dependents}` : "",
-    intake.location ? `Location: ${intake.location}` : "",
-    intake.supportNeeded?.length ? `Support needed: ${intake.supportNeeded.join(", ")}` : "",
-    intake.urgency ? `Urgency: ${intake.urgency}` : "",
-    intake.hasId ? `Has ID: ${intake.hasId}` : "",
-    intake.hasProofOfResidence ? `Has proof of residence: ${intake.hasProofOfResidence}` : "",
-    intake.hasStudentLetter ? `Has student letter: ${intake.hasStudentLetter}` : "",
-    intake.hasProofOfIncome ? `Has proof of income/unemployment: ${intake.hasProofOfIncome}` : "",
-    intake.freeText ? `Additional details: ${intake.freeText}` : "",
+    hasValue(intake.freeText) ? `Situation: ${intake.freeText}` : "",
+    intake.supportNeeded?.length ? `User selected support areas: ${intake.supportNeeded.join(", ")}` : "",
+    hasValue(intake.age) ? `Age: ${intake.age}` : "",
+    hasValue(intake.studentStatus) ? `Student status: ${formatValue(intake.studentStatus as string)}` : "",
+    hasValue(intake.employmentStatus) ? `Employment status: ${formatValue(intake.employmentStatus as string)}` : "",
+    hasValue(intake.incomeSituation) ? `Income situation: ${intake.incomeSituation}` : "",
+    hasValue(intake.dependents) ? `Dependents: ${intake.dependents}` : "",
+    hasValue(intake.location) ? `Location: ${intake.location}` : "",
+    hasValue(intake.urgency) ? `Urgency: ${formatValue(intake.urgency as string)}` : "",
+    hasValue(intake.hasId) ? `Has ID: ${intake.hasId}` : "",
+    hasValue(intake.hasProofOfResidence) ? `Has proof of residence: ${intake.hasProofOfResidence}` : "",
+    hasValue(intake.hasStudentLetter) ? `Has student letter: ${intake.hasStudentLetter}` : "",
+    hasValue(intake.hasProofOfIncome) ? `Has proof of income/unemployment: ${intake.hasProofOfIncome}` : "",
   ]
     .filter(Boolean)
     .join("\n");
 
-  return [freeText, intakeSummary].filter(Boolean).join("\n\n");
+  return intakeSummary || freeText;
 }
 
 function buildGuidancePrompt(query: string, retrieval: ReturnType<typeof retrieveServices>) {

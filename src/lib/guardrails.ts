@@ -34,7 +34,7 @@ const keywordRules = [
   {
     categoryId: "food-support",
     urgency: "sensitive" as const,
-    keywords: ["food", "groceries", "meal", "hungry", "support", "relief"],
+    keywords: ["food", "groceries", "meal", "hungry", "nutrition", "eat"],
   },
   {
     categoryId: "education-support",
@@ -92,12 +92,13 @@ export function detectGuardrails(query: string): GuardrailResult {
     .map((rule) => ({
       ...rule,
       matchedKeywords: rule.keywords.filter((keyword) => normalized.includes(keyword)),
+      score: rule.keywords.filter((keyword) => normalized.includes(keyword)).length + selectedSupportBoost(rule.categoryId, normalized),
     }))
-    .filter((rule) => rule.matchedKeywords.length > 0);
+    .filter((rule) => rule.score > 0);
 
   const urgent = matches.find((match) => match.urgency === "urgent");
-  const selected = urgent ?? matches[0];
-  const categoryId = selected?.categoryId ?? "food-support";
+  const selected = urgent ?? [...matches].sort((a, b) => b.score - a.score)[0];
+  const categoryId = selected?.categoryId ?? "human-referral";
   const category = serviceCategories.find((item) => item.id === categoryId);
   const urgency = urgent ? "urgent" : selected?.urgency ?? (category?.riskLevel === "sensitive" ? "sensitive" : "normal");
 
@@ -108,6 +109,26 @@ export function detectGuardrails(query: string): GuardrailResult {
     safetyNote: buildSafetyNote(categoryId, urgency),
     blocksDecision: urgency !== "normal" || categoryId === "human-referral",
   };
+}
+
+function selectedSupportBoost(categoryId: string, query: string) {
+  const selectedLine = query.match(/user selected support areas:\s*(.+)/i)?.[1] ?? "";
+  if (!selectedLine) return 0;
+
+  const selected = selectedLine.toLowerCase();
+  const selectedTerms: Record<string, string[]> = {
+    "food-support": ["food support", "food", "snap"],
+    "education-support": ["education support", "education", "school fees", "beam"],
+    "student-welfare": ["student welfare", "student affairs", "campus support"],
+    "emergency-relief": ["emergency relief", "bills/utilities", "utilities", "utility", "liheap"],
+    "document-readiness": ["id/documents", "id", "documents", "document readiness"],
+    "healthcare-access": ["healthcare", "health"],
+    "employment-youth": ["employment support", "employment", "job", "business/sme", "business", "sme"],
+    "family-childcare": ["family/childcare", "family", "childcare"],
+    "human-referral": ["human adviser", "human", "adviser", "advisor"],
+  };
+
+  return selectedTerms[categoryId]?.some((term) => selected.includes(term)) ? 8 : 0;
 }
 
 function buildSafetyNote(categoryId: string, urgency: GuardrailResult["urgency"]) {

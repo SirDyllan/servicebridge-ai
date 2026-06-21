@@ -41,10 +41,15 @@ const demoIntake: IntakeFormData = {
 const supportOptions = [
   "Food support",
   "Education support",
+  "Student welfare",
   "ID/documents",
   "Healthcare",
   "Emergency relief",
   "Employment support",
+  "Family/childcare",
+  "Bills/utilities",
+  "Business/SME",
+  "Human adviser",
 ];
 
 const steps = [
@@ -322,8 +327,8 @@ function inferIntakeContext(intake: IntakeFormData): IntakeContext {
   const education = mentions(["education", "school", "student", "fees", "beam", "university", "college"]);
   const documents = mentions(["id", "document", "license", "licence", "dmv", "birth certificate"]);
   const healthcare = mentions(["health", "healthcare", "clinic", "doctor", "medicine", "medical"]);
-  const emergency = mentions(["emergency", "urgent", "today", "relief"]);
-  const employment = mentions(["employment", "job", "income", "unemployed", "lost job", "work"]);
+  const emergency = mentions(["emergency", "urgent", "today", "relief", "bills", "utilities", "utility", "liheap"]);
+  const employment = mentions(["employment", "job", "income", "unemployed", "lost job", "work", "business", "sme"]);
   const family = mentions(["family", "child", "children", "childcare", "dependent", "caregiver", "tanf"]);
 
   return {
