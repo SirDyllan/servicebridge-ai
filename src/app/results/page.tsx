@@ -123,6 +123,7 @@ export default function ResultsPage() {
               match={match}
               index={index}
               missingDocuments={guidance.documentReadiness.missingDocuments}
+              userLocation={handoffLocation}
             />
           ))}
         </section>
@@ -131,12 +132,12 @@ export default function ResultsPage() {
           <div className="h-px flex-1 bg-[#244B35]/15" />
           <div className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-xs font-black uppercase tracking-[0.12em] text-[#244B35] shadow-sm ring-1 ring-[#244B35]/10">
             <ShieldCheck className="size-4 text-[#12A6A6]" />
-            Next: use Search Zone to verify
+            Next: verify with a human
           </div>
           <div className="h-px flex-1 bg-[#244B35]/15" />
         </div>
 
-        <section aria-label="Search Zone handoff" className="grid gap-6">
+        <section aria-label="Human verification handoff" className="grid gap-6">
           <HandoffExperience need={response.retrieval.categoryName} location={handoffLocation} mode="map" />
           <FeedbackForm
             query={query}

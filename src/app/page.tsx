@@ -15,7 +15,9 @@ import { Hero } from "@/components/Hero";
 import { Navbar } from "@/components/Navbar";
 import { ProgramCards } from "@/components/ProgramCards";
 import { Footer } from "@/components/Footer";
+import { FAQ } from "@/components/FAQ";
 import { ResponsibleAiStatement } from "@/components/ResponsibleAiStatement";
+import { ScrollReveal } from "@/components/ScrollReveal";
 
 const introCards = [
   {
@@ -116,7 +118,7 @@ export default function Home() {
       <Navbar />
       <Hero />
 
-      <section id="benefits" className="relative bg-[#6F835F] px-5 pb-28 pt-16 text-white sm:px-8 lg:pb-36">
+      <ScrollReveal as="section" id="benefits" className="relative bg-[#6F835F] px-5 pb-28 pt-16 text-white sm:px-8 lg:pb-36">
         <div className="mx-auto max-w-7xl">
           <div className="grid gap-8 lg:grid-cols-[0.78fr_1.22fr] lg:items-end">
             <div className="sb-fade-up">
@@ -194,9 +196,10 @@ export default function Home() {
             })}
           </div>
         </div>
-      </section>
+      </ScrollReveal>
 
-      <section
+      <ScrollReveal
+        as="section"
         id="how-it-works"
         className="bg-[linear-gradient(180deg,#ffffed_0%,#ffffed_78%,#F6F1E7_100%)] px-5 pb-20 pt-16 text-[#244B35] sm:px-8 lg:pt-36"
       >
@@ -239,10 +242,15 @@ export default function Home() {
             })}
           </div>
         </div>
-      </section>
+      </ScrollReveal>
 
-      <ProgramCards />
-      <ResponsibleAiStatement />
+      <ScrollReveal>
+        <ProgramCards />
+      </ScrollReveal>
+      <ScrollReveal>
+        <ResponsibleAiStatement />
+      </ScrollReveal>
+      <FAQ />
       <Footer />
     </main>
   );

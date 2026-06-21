@@ -16,10 +16,12 @@ export function ResultCard({
   match,
   index,
   missingDocuments = [],
+  userLocation = "",
 }: {
   match: BenefitMatch;
   index: number;
   missingDocuments?: string[];
+  userLocation?: string;
 }) {
   const resultAnchor = `match-${index + 1}`;
 
@@ -76,7 +78,7 @@ export function ResultCard({
       </div>
 
       <div className="mt-5 border-t border-[#244B35]/10 pt-5">
-        <ResultsActionButtons match={match} />
+        <ResultsActionButtons match={match} userLocation={userLocation} />
       </div>
     </article>
   );

@@ -48,6 +48,15 @@ export async function POST(request: Request) {
     });
   }
 
+  const needsClarification = retrieval.classification.primaryNeeds[0] === "Need not clear yet";
+  if (needsClarification) {
+    return NextResponse.json({
+      ...fallback,
+      mode: "fallback",
+      directorySource: directory.source,
+    });
+  }
+
   if (!process.env.OPENAI_API_KEY || safety.category === "self-harm" || safety.category === "medical") {
     return NextResponse.json({
       ...fallback,

@@ -263,3 +263,43 @@ html {
     transition-duration: 0.001ms !important;
   }
 }
+
+.sb-scroll-reveal {
+  opacity: 0;
+  transform: translateY(26px);
+  transition:
+    opacity 720ms cubic-bezier(0.2, 0.8, 0.2, 1),
+    transform 720ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  will-change: opacity, transform;
+}
+
+.sb-scroll-reveal-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.sb-soft-shine {
+  position: relative;
+  overflow: hidden;
+}
+
+.sb-soft-shine::after {
+  background: linear-gradient(110deg, transparent 0%, rgba(255, 255, 255, 0.58) 45%, transparent 70%);
+  content: "";
+  height: 140%;
+  left: -70%;
+  opacity: 0;
+  pointer-events: none;
+  position: absolute;
+  top: -20%;
+  transform: rotate(8deg);
+  transition:
+    left 680ms ease,
+    opacity 240ms ease;
+  width: 46%;
+}
+
+.sb-soft-shine:hover::after {
+  left: 120%;
+  opacity: 1;
+}
