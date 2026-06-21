@@ -50,7 +50,9 @@ export function retrieveServices(query: string, directoryRecords: ServiceRecord[
 
       const queryTerms = meaningfulQueryTerms(normalized);
       const keywordScore = queryTerms.filter((term) => searchable.includes(term)).length;
-      const explicitKeywordScore = record.keywords.filter((keyword) => normalized.includes(keyword)).length * 2;
+      const explicitKeywordScore = meaningfulRecordKeywords(record.keywords).filter((keyword) =>
+        normalized.includes(keyword),
+      ).length * 2;
       const categoryScore = record.categoryId === guardrail.categoryId ? 6 : 0;
       const selectedSupportScore = selectedCategoryIds.has(record.categoryId) ? 8 : 0;
       const verificationScore =
@@ -188,7 +190,7 @@ function mentionsBeamLikeNeed(query: string) {
 }
 
 function mentionsHealthcareNeed(query: string) {
-  return /\b(health|healthcare|medical|clinic|hospital|doctor|medicine|prescription|pregnant|disability|coverage|insurance)\b/i.test(
+  return /\b(sick|ill|unwell|not feeling well|pain|fever|health|healthcare|medical|clinic|hospital|doctor|medicine|prescription|pregnant|disability|coverage|insurance)\b/i.test(
     query,
   );
 }
@@ -333,21 +335,45 @@ function pickResultRecords(
 }
 
 function selectedSupportCategoryIds(query: string) {
-  const selectedLine = query.match(/user selected support areas:\s*(.+)/i)?.[1]?.toLowerCase() ?? "";
   const selected = new Set<string>();
+  const selectedSegments = extractSupportAreaLines(query)
+    .flatMap((line) => line.split(","))
+    .map((item) => item.trim().toLowerCase())
+    .filter(Boolean);
+
+  for (const segment of selectedSegments) {
+    const categoryId = selectedSupportCategoryIdForText(segment);
+    if (categoryId) selected.add(categoryId);
+  }
+
+  if (selected.size) return selected;
+
+  const selectedLine = selectedSegments.join(", ");
   if (!selectedLine) return selected;
 
-  if (/\bfood\b|snap/.test(selectedLine)) selected.add("food-support");
-  if (/education|school|beam/.test(selectedLine)) selected.add("education-support");
-  if (/student welfare|student affairs|campus/.test(selectedLine)) selected.add("student-welfare");
-  if (/emergency|bills|utilit|liheap/.test(selectedLine)) selected.add("emergency-relief");
-  if (/\bid\b|document/.test(selectedLine)) selected.add("document-readiness");
-  if (/health/.test(selectedLine)) selected.add("healthcare-access");
-  if (/employment|job|business|sme/.test(selectedLine)) selected.add("employment-youth");
-  if (/family|childcare|child/.test(selectedLine)) selected.add("family-childcare");
-  if (/human|adviser|advisor/.test(selectedLine)) selected.add("human-referral");
+  const fallbackCategoryId = selectedSupportCategoryIdForText(selectedLine);
+  if (fallbackCategoryId) selected.add(fallbackCategoryId);
 
   return selected;
+}
+
+function selectedSupportCategoryIdForText(text: string) {
+  if (/\bfood\b|snap/.test(text)) return "food-support";
+  if (/education|school|beam/.test(text)) return "education-support";
+  if (/student welfare|student affairs|campus/.test(text)) return "student-welfare";
+  if (/emergency|bills|utilit|liheap/.test(text)) return "emergency-relief";
+  if (/health/.test(text)) return "healthcare-access";
+  if (/employment|job|business|sme/.test(text)) return "employment-youth";
+  if (/family|childcare|child/.test(text)) return "family-childcare";
+  if (/\bid\b|document/.test(text)) return "document-readiness";
+  if (/human|adviser|advisor/.test(text)) return "human-referral";
+  return "";
+}
+
+function extractSupportAreaLines(query: string) {
+  return Array.from(
+    query.matchAll(/(?:user selected support areas|plain-language inferred support areas(?:\s*\([^)]+\))?):\s*(.+)/gi),
+  ).map((match) => match[1] ?? "");
 }
 
 function selectedCategoryNames(categoryIds: Set<string>) {
@@ -398,6 +424,21 @@ function meaningfulQueryTerms(query: string) {
     .split(/\W+/)
     .map((term) => term.trim())
     .filter((term) => term.length > 2 && !stopwords.has(term));
+}
+
+function meaningfulRecordKeywords(keywords: string[]) {
+  const genericKeywords = new Set([
+    "support",
+    "access",
+    "usa",
+    "united states",
+    "america",
+    "zimbabwe",
+    "mutare",
+    "harare",
+    "bulawayo",
+  ]);
+  return keywords.filter((keyword) => keyword.length > 2 && !genericKeywords.has(keyword.toLowerCase()));
 }
 
 function mentionsDocumentBarrier(query: string) {

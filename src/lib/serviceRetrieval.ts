@@ -118,6 +118,11 @@ function isLowInformationMessage(message: string) {
     "food",
     "health",
     "healthcare",
+    "sick",
+    "ill",
+    "unwell",
+    "pain",
+    "fever",
     "job",
     "work",
     "support",
@@ -365,7 +370,7 @@ function buildLowInformationQuestions(message: string) {
     ];
   }
 
-  if (/\b(health|healthcare)\b/i.test(message)) {
+  if (/\b(health|healthcare|sick|ill|unwell|pain|fever)\b/i.test(message)) {
     return [
       "Are you looking for help accessing healthcare support, documents for healthcare, or an urgent medical situation?",
       "What city, campus, or area are you in?",

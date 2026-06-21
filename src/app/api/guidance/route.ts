@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import OpenAI from "openai";
 import { buildFallbackGuidance, normalizeGuidance, retrieveServices } from "@/lib/retrieval";
 import { getServiceRecords } from "@/lib/firebase-rest";
+import { appendIntentContext, understandSupportIntent } from "@/lib/intentUnderstanding";
 import type { IntakeFormData } from "@/types/benefits";
 
 type GuidanceRequest = {
@@ -11,16 +12,18 @@ type GuidanceRequest = {
 
 export async function POST(request: Request) {
   const body = (await request.json()) as GuidanceRequest;
-  const query = buildQuery(body);
+  const baseQuery = buildQuery(body);
 
-  if (!query) {
+  if (!baseQuery) {
     return NextResponse.json({ error: "A query is required." }, { status: 400 });
   }
 
+  const openAiKey = process.env.OPENAI_API_KEY;
+  const intent = await understandSupportIntent(baseQuery, openAiKey);
+  const query = appendIntentContext(baseQuery, intent);
   const directory = await getServiceRecords();
   const retrieval = retrieveServices(query, directory.records);
   const fallback = buildFallbackGuidance(query, retrieval);
-  const openAiKey = process.env.OPENAI_API_KEY;
   const geminiKey = process.env.GEMINI_API_KEY;
 
   if (openAiKey) {

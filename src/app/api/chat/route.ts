@@ -2,6 +2,13 @@ import { NextResponse } from "next/server";
 import { getServiceRecords } from "@/lib/firebase-rest";
 import { buildGroundedFallbackResponse } from "@/lib/groundedFallback";
 import { buildIdentityOfficeSearchQuery, getIdentityOfficeRouting } from "@/lib/officeRouting";
+import {
+  appendIntentContext,
+  categoryIdsToLabels,
+  inferLocalSupportCategoryIds,
+  understandSupportIntent,
+  type IntentUnderstandingResult,
+} from "@/lib/intentUnderstanding";
 import { generateOpenAiChatResponse } from "@/lib/openai";
 import { assessSafety } from "@/lib/safety";
 import { retrieveChatServices } from "@/lib/serviceRetrieval";
@@ -23,8 +30,12 @@ export async function POST(request: Request) {
 
   const history = sanitizeHistory(body.history);
   const directory = await getServiceRecords();
-  const conversationState = buildConversationState(message, history);
-  const contextText = buildContextText(message, conversationState);
+  const initialSafety = assessSafety(message);
+  const intent = initialSafety.shouldLimitAdvice
+    ? buildLocalIntent(message)
+    : await understandSupportIntent(message, process.env.OPENAI_API_KEY);
+  const conversationState = applyIntentToConversationState(buildConversationState(message, history), intent);
+  const contextText = buildContextText(message, conversationState, intent);
   const safety = assessSafety(contextText);
   const retrieval = retrieveChatServices(contextText, directory.records, safety);
   const fallback = buildGroundedFallbackResponse(contextText, retrieval, safety);
@@ -48,7 +59,7 @@ export async function POST(request: Request) {
   try {
     const openAiResponse = await generateOpenAiChatResponse({
       message,
-      history: stateToHistory(conversationState, message),
+      history: stateToHistory(conversationState, message, intent),
       retrieval,
       fallback,
       safety,
@@ -183,12 +194,14 @@ function buildConversationState(message: string, history: ChatMessage[]): Conver
   };
 }
 
-function buildContextText(message: string, state: ConversationState) {
+function buildContextText(message: string, state: ConversationState, intent?: IntentUnderstandingResult) {
   const relevantFacts = filterFactsForCurrentIntent(state.facts, state.supportCategory, message);
+  const intentContext = buildPlainLanguageIntentLine(message, intent);
 
   return [
     `Current user message: ${message}`,
     state.supportCategory ? `Current support category: ${state.supportCategory}` : "",
+    intentContext,
     state.location ? `Confirmed location: ${state.location}` : "",
     ...relevantFacts.map((fact) => `Confirmed fact: ${fact}`),
   ]
@@ -196,10 +209,12 @@ function buildContextText(message: string, state: ConversationState) {
     .join("\n");
 }
 
-function stateToHistory(state: ConversationState, message: string): ChatMessage[] {
+function stateToHistory(state: ConversationState, message: string, intent?: IntentUnderstandingResult): ChatMessage[] {
   const relevantFacts = filterFactsForCurrentIntent(state.facts, state.supportCategory, message);
+  const intentContext = buildPlainLanguageIntentLine(message, intent);
   const content = [
     state.supportCategory ? `Current support category: ${state.supportCategory}` : "",
+    intentContext,
     state.location ? `Confirmed location: ${state.location}` : "",
     ...relevantFacts,
   ]
@@ -207,6 +222,30 @@ function stateToHistory(state: ConversationState, message: string): ChatMessage[
     .join("\n");
 
   return content ? [{ role: "user", content }] : [];
+}
+
+function buildPlainLanguageIntentLine(message: string, intent = buildLocalIntent(message)) {
+  if (!intent.categoryIds.length) return "";
+
+  return appendIntentContext("", intent).trim();
+}
+
+function buildLocalIntent(message: string): IntentUnderstandingResult {
+  const categoryIds = inferLocalSupportCategoryIds(message);
+  return {
+    categoryIds,
+    source: categoryIds.length ? "local" : "none",
+  };
+}
+
+function applyIntentToConversationState(state: ConversationState, intent: IntentUnderstandingResult): ConversationState {
+  const [primaryCategory] = categoryIdsToLabels(intent.categoryIds);
+  if (!primaryCategory) return state;
+
+  return {
+    ...state,
+    supportCategory: primaryCategory,
+  };
 }
 
 function filterFactsForCurrentIntent(facts: string[], supportCategory: string, message: string) {
@@ -240,7 +279,7 @@ function inferSupportCategory(message: string) {
   if (/\b(food|groceries|meal|hungry|snap)\b/.test(normalized)) return "Food Support";
   if (/\b(school|student|education|fees|beam|college|university)\b/.test(normalized)) return "Education Support";
   if (/\b(id|identity|document|license|licence|dmv|birth certificate)\b/.test(normalized)) return "Document Readiness";
-  if (/\b(health|healthcare|clinic|doctor|medicine|medical)\b/.test(normalized)) return "Healthcare Access";
+  if (/\b(sick|ill|unwell|not feeling well|health|healthcare|clinic|doctor|medicine|medical|pain|fever)\b/.test(normalized)) return "Healthcare Access";
   if (/\b(emergency|urgent|today|relief)\b/.test(normalized)) return "Emergency Relief";
   if (/\b(job|work|employment|income|unemployed)\b/.test(normalized)) return "Youth Employment";
   if (/\b(child|children|family|caregiver|dependent|tanf)\b/.test(normalized)) return "Family Support";

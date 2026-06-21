@@ -112,7 +112,7 @@ export function detectGuardrails(query: string): GuardrailResult {
 }
 
 function selectedSupportBoost(categoryId: string, query: string) {
-  const selectedLine = query.match(/user selected support areas:\s*(.+)/i)?.[1] ?? "";
+  const selectedLine = extractSupportAreaLines(query).join(", ");
   if (!selectedLine) return 0;
 
   const selected = selectedLine.toLowerCase();
@@ -128,7 +128,19 @@ function selectedSupportBoost(categoryId: string, query: string) {
     "human-referral": ["human adviser", "human", "adviser", "advisor"],
   };
 
-  return selectedTerms[categoryId]?.some((term) => selected.includes(term)) ? 8 : 0;
+  const firstPosition = selectedTerms[categoryId]
+    ?.map((term) => selected.indexOf(term))
+    .filter((position) => position >= 0)
+    .sort((left, right) => left - right)[0];
+
+  if (firstPosition === undefined) return 0;
+  return Math.max(6, 10 - Math.floor(firstPosition / 24));
+}
+
+function extractSupportAreaLines(query: string) {
+  return Array.from(
+    query.matchAll(/(?:user selected support areas|plain-language inferred support areas(?:\s*\([^)]+\))?):\s*(.+)/gi),
+  ).map((match) => match[1] ?? "");
 }
 
 function buildSafetyNote(categoryId: string, urgency: GuardrailResult["urgency"]) {
